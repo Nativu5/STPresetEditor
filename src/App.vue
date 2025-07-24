@@ -4,7 +4,7 @@ import { usePresetStore } from './stores/presetStore';
 import presetData from '../preset.example.json';
 import PromptLibrary from './components/LeftSidebar/PromptLibrary.vue';
 import EditorView from './components/MainEditor/EditorView.vue';
-import DetailsView from './components/RightSidebar/DetailsView.vue';
+import RightSidebar from './components/RightSidebar/index.vue';
 import Toolbar from './components/Toolbar.vue';
 import JsonImportModal from './components/JsonImportModal.vue';
 import JsonExportModal from './components/JsonExportModal.vue';
@@ -37,12 +37,12 @@ const handleImport = (jsonString) => {
 
     <main class="flex-1 overflow-hidden">
         <splitpanes class="default-theme h-full">
-            <pane min-size="15" size="20">
+            <pane min-size="15" size="25">
                 <div class="p-4 h-full flex flex-col bg-gray-50">
                     <PromptLibrary />
                 </div>
             </pane>
-            <pane min-size="30" size="55">
+            <pane min-size="30" size="50">
                 <div class="p-4 h-full flex flex-col">
                     <h2 class="text-lg font-semibold mb-4 flex-shrink-0">Editor</h2>
                     <div class="overflow-y-auto">
@@ -52,10 +52,7 @@ const handleImport = (jsonString) => {
             </pane>
             <pane min-size="15" size="25">
                 <div class="p-4 h-full flex flex-col bg-gray-50">
-                    <h2 class="text-lg font-semibold mb-4 flex-shrink-0">Details</h2>
-                    <div class="overflow-y-auto">
-                        <DetailsView />
-                    </div>
+                    <RightSidebar />
                 </div>
             </pane>
         </splitpanes>

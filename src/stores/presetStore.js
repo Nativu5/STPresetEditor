@@ -17,6 +17,7 @@ export const usePresetStore = defineStore('preset', {
     selectedLibraryPrompts: new Set(),
     librarySearchTerm: '',
     scrollToPromptId: null,
+    activeRightSidebarTab: 'details', // 'details' or 'variables'
   }),
   getters: {
     getPromptById: (state) => (id) => {
@@ -24,6 +25,9 @@ export const usePresetStore = defineStore('preset', {
     },
     isPromptInOrder: (state) => (promptId) => {
         return state.promptOrder.includes(promptId);
+    },
+    definedVariables: (state) => {
+        return Object.keys(state.variables).sort();
     },
     orderedPrompts: (state) => {
       return state.promptOrder
@@ -138,11 +142,13 @@ export const usePresetStore = defineStore('preset', {
     selectPrompt(promptId) {
       this.selectedPromptId = promptId;
       this.selectedMacro = null;
+      this.activeRightSidebarTab = 'details';
     },
     selectMacro(variableName) {
         if (variableName) {
             this.selectedMacro = { variableName };
             this.selectedPromptId = null;
+            this.activeRightSidebarTab = 'details';
         }
     },
     createNewPrompt() {
@@ -201,12 +207,35 @@ export const usePresetStore = defineStore('preset', {
         const prompt = this.prompts[promptId];
         if (prompt && typeof field === 'string') {
             prompt[field] = value;
-
-            // If content is changed, we need to re-analyze macros
             if (field === 'content') {
                 this.analyzeMacros();
             }
         }
+    },
+    setActiveRightSidebarTab(tabName) {
+        this.activeRightSidebarTab = tabName;
+    },
+    renameVariable({ oldName, newName }) {
+        if (!newName || newName.includes(' ') || this.variables[newName]) {
+            alert('Invalid or conflicting new variable name.');
+            return false;
+        }
+
+        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const oldNameEscaped = escapeRegExp(oldName);
+
+        for (const promptId in this.prompts) {
+            const prompt = this.prompts[promptId];
+            const setvarRegex = new RegExp(`{{\s*setvar\s*::)${oldNameEscaped}(\s*::.*?\s*}}`, 'g');
+            const getvarRegex = new RegExp(`{{\s*getvar\s*::)${oldNameEscaped}(\s*}}`, 'g');
+            
+            prompt.content = prompt.content.replace(setvarRegex, `$1${newName}$2`);
+            prompt.content = prompt.content.replace(getvarRegex, `$1${newName}$2`);
+        }
+
+        this.analyzeMacros();
+        this.selectMacro(newName);
+        return true;
     }
   },
 });
