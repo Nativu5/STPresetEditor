@@ -196,6 +196,17 @@ export const usePresetStore = defineStore('preset', {
             this.promptOrder.unshift(promptId);
             this.navigateToPrompt(promptId);
         }
+    },
+    updatePromptDetail({ promptId, field, value }) {
+        const prompt = this.prompts[promptId];
+        if (prompt && typeof field === 'string') {
+            prompt[field] = value;
+
+            // If content is changed, we need to re-analyze macros
+            if (field === 'content') {
+                this.analyzeMacros();
+            }
+        }
     }
   },
 });

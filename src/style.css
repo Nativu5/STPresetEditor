@@ -1,1 +1,22 @@
-@import "tailwindcss";
+/* Import Tailwind CSS */
+@import "tailwindcss"; /* Recommended when using Vite */
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9; /* bg-slate-100 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8; /* bg-slate-400 */
+  border-radius: 10px;
+  border: 2px solid #f1f5f9; /* Add a border to match the track */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* bg-slate-500 */
+}
