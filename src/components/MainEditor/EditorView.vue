@@ -43,7 +43,7 @@ watch(() => store.scrollToPromptId, (newId) => {
     const cardComponent = promptCardRefs.value[newId];
     if (cardComponent) {
       const element = cardComponent.$el;
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       
       // Flash animation
       element.classList.add('flash-highlight');

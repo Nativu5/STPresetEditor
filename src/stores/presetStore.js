@@ -16,11 +16,14 @@ export const usePresetStore = defineStore('preset', {
     isMultiSelectActive: false,
     selectedLibraryPrompts: new Set(),
     librarySearchTerm: '',
-    scrollToPromptId: null, // ID of the prompt to scroll to
+    scrollToPromptId: null,
   }),
   getters: {
     getPromptById: (state) => (id) => {
       return state.prompts[id];
+    },
+    isPromptInOrder: (state) => (promptId) => {
+        return state.promptOrder.includes(promptId);
     },
     orderedPrompts: (state) => {
       return state.promptOrder
@@ -154,6 +157,7 @@ export const usePresetStore = defineStore('preset', {
         this.prompts[newId] = newPrompt;
         this.promptOrder.unshift(newId);
         this.selectPrompt(newId);
+        this.navigateToPrompt(newId);
     },
     toggleMultiSelect() {
         this.isMultiSelectActive = !this.isMultiSelectActive;
@@ -186,6 +190,12 @@ export const usePresetStore = defineStore('preset', {
     },
     clearScrollToRequest() {
         this.scrollToPromptId = null;
+    },
+    addPromptToOrder(promptId) {
+        if (!this.promptOrder.includes(promptId)) {
+            this.promptOrder.unshift(promptId);
+            this.navigateToPrompt(promptId);
+        }
     }
   },
 });
