@@ -8,19 +8,19 @@
     ]"
   >
     <div class="flex justify-between items-start">
-      <div class="cursor-grab flex-grow">
+      <div class="cursor-grab flex-grow mr-4">
         <h3 
           class="font-bold text-md mb-2"
           :class="{ 'text-gray-500': prompt.enabled === false }"
         >
           {{ prompt.name }}
         </h3>
-        <p 
-          class="text-sm whitespace-pre-wrap"
-          :class="{ 'text-gray-600': prompt.enabled === false }"
-        >
-          {{ prompt.content }}
-        </p>
+        <div class="text-sm whitespace-pre-wrap" :class="{ 'text-gray-600': prompt.enabled === false }">
+          <template v-for="(segment, index) in parsedContent" :key="index">
+            <span v-if="segment.type === 'text'">{{ segment.value }}</span>
+            <MacroRenderer v-else-if="segment.type === 'macro'" :content="segment.value" :prompt-id="prompt.id" />
+          </template>
+        </div>
       </div>
       <div class="flex flex-col space-y-1 ml-2 flex-shrink-0">
         <button @click.stop="toggleEnabled" class="p-1 text-xs text-white rounded" :class="[prompt.enabled === false ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400 hover:bg-gray-500']">
@@ -36,6 +36,7 @@
 <script setup>
 import { defineProps, computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
+import MacroRenderer from './MacroRenderer.vue';
 
 const props = defineProps({
   prompt: {
@@ -47,6 +48,21 @@ const props = defineProps({
 const store = usePresetStore();
 
 const isSelected = computed(() => store.selectedPromptId === props.prompt.id);
+
+const parsedContent = computed(() => {
+  const content = props.prompt.content || '';
+  const regex = /({{\s*.*?\s*}})/g;
+  const parts = content.split(regex).filter(part => part);
+  
+  return parts.map(part => {
+    const match = part.match(/^{{\s*(.*?)\s*}}$/);
+    if (match) {
+      return { type: 'macro', value: match[1] };
+    } else {
+      return { type: 'text', value: part };
+    }
+  });
+});
 
 const selectPrompt = () => {
   store.selectPrompt(props.prompt.id);

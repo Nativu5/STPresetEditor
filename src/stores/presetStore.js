@@ -11,6 +11,9 @@ export const usePresetStore = defineStore('preset', {
     viewOptions: {
       renderMacros: true,
     },
+    // Macro analysis results
+    variables: {}, // { varName: { definedIn: 'promptId', referencedIn: ['promptId1', 'promptId2'] } }
+    unresolvedVariables: [], // List of getvar macros that have no definition
   }),
   getters: {
     getPromptById: (state) => (id) => {
@@ -81,11 +84,50 @@ export const usePresetStore = defineStore('preset', {
                 .map(p => p.identifier || p.name)
                 .filter(Boolean);
         }
+        this.analyzeMacros(); // Analyze macros after parsing
       } catch (error) {
         console.error('Failed to parse JSON string:', error);
         this.prompts = {};
         this.promptOrder = [];
       }
+    },
+    analyzeMacros() {
+        const newVariables = {};
+        const getVarRefs = [];
+        const macroRegex = /{{\s*(.*?)\s*}}/g;
+
+        for (const promptId in this.prompts) {
+            const prompt = this.prompts[promptId];
+            const content = prompt.content || '';
+            let match;
+            while ((match = macroRegex.exec(content)) !== null) {
+                const parts = match[1].split('::').map(p => p.trim());
+                const type = parts[0];
+                
+                if (type === 'setvar' && parts.length >= 2) {
+                    const varName = parts[1];
+                    if (!newVariables[varName]) {
+                        newVariables[varName] = { definedIn: null, referencedIn: [] };
+                    }
+                    newVariables[varName].definedIn = promptId;
+                } else if (type === 'getvar' && parts.length >= 2) {
+                    getVarRefs.push({ varName: parts[1], promptId });
+                }
+            }
+        }
+
+        // Populate referencedIn and find unresolved variables
+        this.unresolvedVariables = [];
+        getVarRefs.forEach(({ varName, promptId }) => {
+            if (newVariables[varName]) {
+                newVariables[varName].referencedIn.push(promptId);
+            } else {
+                this.unresolvedVariables.push({ varName, promptId });
+            }
+        });
+
+        this.variables = newVariables;
+        console.log('Macro analysis complete.', this.variables);
     },
     resetState() {
       if (this.initialJson) {
@@ -110,6 +152,13 @@ export const usePresetStore = defineStore('preset', {
     },
     selectPrompt(promptId) {
       this.selectedPromptId = promptId;
+      this.selectedMacro = null; // Deselect macro when a prompt card is selected
+    },
+    selectMacro(variableName) {
+        if (variableName) {
+            this.selectedMacro = { variableName };
+            this.selectedPromptId = null; // Deselect prompt card
+        }
     },
   },
 });

@@ -1,11 +1,10 @@
 <template>
   <div class="p-4 bg-white rounded-lg shadow-inner h-full">
-    <div v-if="selectedPrompt">
-      <PromptDetails :prompt="selectedPrompt" />
+    <div v-if="selectedMacro">
+      <MacroDetails />
     </div>
-    <div v-else-if="selectedMacro">
-      <!-- MacroDetails will be implemented later -->
-      <p>Macro details for {{ selectedMacro }}</p>
+    <div v-else-if="selectedPrompt">
+      <PromptDetails :prompt="selectedPrompt" />
     </div>
     <div v-else>
       <p class="text-gray-500 italic">Select a prompt or a macro to see details here.</p>
@@ -17,7 +16,7 @@
 import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import PromptDetails from './PromptDetails.vue';
-// import MacroDetails from './MacroDetails.vue'; // Will be used later
+import MacroDetails from './MacroDetails.vue';
 
 const store = usePresetStore();
 
