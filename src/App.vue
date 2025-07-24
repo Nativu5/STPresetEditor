@@ -55,12 +55,12 @@ const handleImport = (jsonString) => {
 
     <!-- Modals -->
     <JsonImportModal 
-      v-if="isImportModalOpen" 
+      :is-open="isImportModalOpen" 
       @close="isImportModalOpen = false" 
       @import="handleImport"
     />
     <JsonExportModal 
-      v-if="isExportModalOpen" 
+      :is-open="isExportModalOpen" 
       @close="isExportModalOpen = false" 
     />
   </div>
