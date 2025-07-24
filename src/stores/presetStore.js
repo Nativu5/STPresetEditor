@@ -2,18 +2,21 @@ import { defineStore } from 'pinia';
 
 export const usePresetStore = defineStore('preset', {
   state: () => ({
-    initialJson: '', // Store the very first loaded JSON for resetting
-    rawJson: '', // Store the current working JSON
-    prompts: {}, // Stored as an object keyed by identifier
+    initialJson: '', 
+    rawJson: '', 
+    prompts: {}, 
     promptOrder: [],
     selectedPromptId: null,
     selectedMacro: null,
     viewOptions: {
       renderMacros: true,
     },
-    // Macro analysis results
-    variables: {}, // { varName: { definedIn: 'promptId', referencedIn: ['promptId1', 'promptId2'] } }
-    unresolvedVariables: [], // List of getvar macros that have no definition
+    variables: {},
+    unresolvedVariables: [],
+    isMultiSelectActive: false,
+    selectedLibraryPrompts: new Set(),
+    librarySearchTerm: '',
+    scrollToPromptId: null, // ID of the prompt to scroll to
   }),
   getters: {
     getPromptById: (state) => (id) => {
@@ -25,16 +28,21 @@ export const usePresetStore = defineStore('preset', {
         .filter(p => p !== null);
     },
     libraryPrompts: (state) => {
-        return Object.values(state.prompts);
+        const allPrompts = Object.values(state.prompts).sort((a, b) => a.name.localeCompare(b.name));
+        if (!state.librarySearchTerm) {
+            return allPrompts;
+        }
+        const searchTerm = state.librarySearchTerm.toLowerCase();
+        return allPrompts.filter(p => 
+            p.name.toLowerCase().includes(searchTerm) || 
+            p.id.toLowerCase().includes(searchTerm)
+        );
     },
     finalJson: (state) => {
       const preset = JSON.parse(state.rawJson || '{}');
-      
       preset.prompts = Object.values(state.prompts);
-
       if (Array.isArray(preset.prompt_order)) {
         const characterOrderIndex = preset.prompt_order.findIndex(item => item.character_id === 100001);
-
         if (characterOrderIndex !== -1) {
           preset.prompt_order[characterOrderIndex].order = state.promptOrder.map(id => ({
             identifier: id,
@@ -42,7 +50,6 @@ export const usePresetStore = defineStore('preset', {
           }));
         }
       }
-      
       return JSON.stringify(preset, null, 2);
     },
   },
@@ -55,36 +62,23 @@ export const usePresetStore = defineStore('preset', {
       try {
         this.rawJson = jsonString;
         const parsed = JSON.parse(jsonString);
-
         const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
         this.prompts = promptsArray.reduce((acc, prompt) => {
             const id = prompt.identifier || prompt.name;
-            if (id) {
-              acc[id] = { ...prompt, id };
-            }
+            if (id) acc[id] = { ...prompt, id };
             return acc;
         }, {});
-
-        const characterOrder = Array.isArray(parsed.prompt_order)
-          ? parsed.prompt_order.find(item => item.character_id === 100001)
-          : null;
-
+        const characterOrder = Array.isArray(parsed.prompt_order) ? parsed.prompt_order.find(item => item.character_id === 100001) : null;
         if (characterOrder && Array.isArray(characterOrder.order)) {
             const orderData = characterOrder.order;
             this.promptOrder = orderData.map(item => item.identifier).filter(id => id in this.prompts);
             orderData.forEach(item => {
-                if (this.prompts[item.identifier]) {
-                    this.prompts[item.identifier].enabled = item.enabled;
-                }
+                if (this.prompts[item.identifier]) this.prompts[item.identifier].enabled = item.enabled;
             });
         } else {
-            this.promptOrder = promptsArray
-                .filter(p => p.enabled !== false)
-                .sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0))
-                .map(p => p.identifier || p.name)
-                .filter(Boolean);
+            this.promptOrder = promptsArray.filter(p => p.enabled !== false).sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0)).map(p => p.identifier || p.name).filter(Boolean);
         }
-        this.analyzeMacros(); // Analyze macros after parsing
+        this.analyzeMacros();
       } catch (error) {
         console.error('Failed to parse JSON string:', error);
         this.prompts = {};
@@ -95,7 +89,6 @@ export const usePresetStore = defineStore('preset', {
         const newVariables = {};
         const getVarRefs = [];
         const macroRegex = /{{\s*(.*?)\s*}}/g;
-
         for (const promptId in this.prompts) {
             const prompt = this.prompts[promptId];
             const content = prompt.content || '';
@@ -103,36 +96,27 @@ export const usePresetStore = defineStore('preset', {
             while ((match = macroRegex.exec(content)) !== null) {
                 const parts = match[1].split('::').map(p => p.trim());
                 const type = parts[0];
-                
                 if (type === 'setvar' && parts.length >= 2) {
                     const varName = parts[1];
-                    if (!newVariables[varName]) {
-                        newVariables[varName] = { definedIn: null, referencedIn: [] };
-                    }
-                    newVariables[varName].definedIn = promptId;
+                    if (!newVariables[varName]) newVariables[varName] = { definedIn: [], referencedIn: [] };
+                    newVariables[varName].definedIn.push(promptId);
                 } else if (type === 'getvar' && parts.length >= 2) {
                     getVarRefs.push({ varName: parts[1], promptId });
                 }
             }
         }
-
-        // Populate referencedIn and find unresolved variables
         this.unresolvedVariables = [];
         getVarRefs.forEach(({ varName, promptId }) => {
-            if (newVariables[varName]) {
+            if (newVariables[varName] && newVariables[varName].definedIn.length > 0) {
                 newVariables[varName].referencedIn.push(promptId);
             } else {
                 this.unresolvedVariables.push({ varName, promptId });
             }
         });
-
         this.variables = newVariables;
-        console.log('Macro analysis complete.', this.variables);
     },
     resetState() {
-      if (this.initialJson) {
-        this.parseFromJson(this.initialJson);
-      }
+      if (this.initialJson) this.parseFromJson(this.initialJson);
     },
     updatePromptOrder(newOrder) {
       this.promptOrder = newOrder.map(p => p.id);
@@ -146,19 +130,62 @@ export const usePresetStore = defineStore('preset', {
     },
     togglePromptEnabled(promptId) {
       const prompt = this.prompts[promptId];
-      if (prompt) {
-        prompt.enabled = !(prompt.enabled !== false);
-      }
+      if (prompt) prompt.enabled = !(prompt.enabled !== false);
     },
     selectPrompt(promptId) {
       this.selectedPromptId = promptId;
-      this.selectedMacro = null; // Deselect macro when a prompt card is selected
+      this.selectedMacro = null;
     },
     selectMacro(variableName) {
         if (variableName) {
             this.selectedMacro = { variableName };
-            this.selectedPromptId = null; // Deselect prompt card
+            this.selectedPromptId = null;
         }
     },
+    createNewPrompt() {
+        const newId = crypto.randomUUID();
+        const newPrompt = {
+            id: newId,
+            identifier: newId,
+            name: 'New Untitled Prompt',
+            content: '{{// This is a new prompt. Add your content here.}}',
+            enabled: false, 
+        };
+        this.prompts[newId] = newPrompt;
+        this.promptOrder.unshift(newId);
+        this.selectPrompt(newId);
+    },
+    toggleMultiSelect() {
+        this.isMultiSelectActive = !this.isMultiSelectActive;
+        this.selectedLibraryPrompts.clear();
+    },
+    toggleLibrarySelection(promptId) {
+        if (this.selectedLibraryPrompts.has(promptId)) {
+            this.selectedLibraryPrompts.delete(promptId);
+        } else {
+            this.selectedLibraryPrompts.add(promptId);
+        }
+    },
+    deleteSelectedPrompts() {
+        if (this.selectedLibraryPrompts.size === 0) return;
+        if (confirm(`Are you sure you want to permanently delete ${this.selectedLibraryPrompts.size} selected prompt(s)?`)) {
+            this.selectedLibraryPrompts.forEach(promptId => {
+                delete this.prompts[promptId];
+                this.promptOrder = this.promptOrder.filter(id => id !== promptId);
+            });
+            this.selectedLibraryPrompts.clear();
+            this.isMultiSelectActive = false;
+        }
+    },
+    setLibrarySearch(term) {
+        this.librarySearchTerm = term;
+        this.selectedLibraryPrompts.clear();
+    },
+    navigateToPrompt(promptId) {
+        this.scrollToPromptId = promptId;
+    },
+    clearScrollToRequest() {
+        this.scrollToPromptId = null;
+    }
   },
 });
