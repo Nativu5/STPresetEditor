@@ -1,6 +1,23 @@
 import { defineStore } from 'pinia';
 import { debounce } from 'lodash-es';
 
+/**
+ * @typedef {object} MacroData
+ * @property {string} id - A unique identifier for this specific macro instance, e.g., "promptId-charIndex".
+ * @property {string} full - The full, original macro string, e.g., "{{setvar::x::10}}".
+ * @property {string} type - The parsed type of the macro, e.g., "setvar", "getvar", "comment", "random".
+ * @property {string|null} varName - The variable name, if applicable (for "setvar" and "getvar").
+ * @property {string|null} value - The value being set, if applicable (for "setvar").
+ * @property {string[]} params - An array of parameters for other macro types like "random::a::b".
+ */
+
+/**
+ * @typedef {Object} PartialPrompt
+ * @property {string} id
+ * @property {string} [content]
+ * @property {MacroData[]} [macros]
+ */
+
 // --- Helper function to create a debounced action ---
 function debouncedAction(action, delay) {
   const debounced = debounce(action, delay);
@@ -61,7 +78,16 @@ export const usePresetStore = defineStore('preset', {
     },
     finalJson: (state) => {
       const preset = JSON.parse(state.rawJson || '{}');
-      preset.prompts = Object.values(state.prompts);
+
+      // Create a clean version of prompts for export, removing any internal-use properties.
+      const cleanedPrompts = Object.values(state.prompts).map((p) => {
+        // eslint-disable-next-line no-unused-vars
+        const { macros, ...rest } = p;
+        return rest;
+      });
+
+      preset.prompts = cleanedPrompts;
+
       if (Array.isArray(preset.prompt_order)) {
         const characterOrderIndex = preset.prompt_order.findIndex(
           (item) => item.character_id === 100001,
@@ -121,56 +147,39 @@ export const usePresetStore = defineStore('preset', {
       if (this.initialJson) this.parseFromJson(this.initialJson);
     },
 
-    /*
-     * ----------------------------------------------------------------
-     * Unified Macro Analysis & Data Structure
-     * ----------------------------------------------------------------
-     * The macro analysis system is the core of the editor's logic.
-     * It works in a series of passes to parse, analyze, and link
-     * all macros within the preset.
-     *
-     * The key output of the first pass is a structured `macroData`
-     * object, which is attached to each prompt. This object provides
-     * a consistent, pre-parsed representation of a macro, eliminating
-     * redundant parsing in the components.
-     *
-     * The `macroData` object has the following structure:
-     * {
-     *   id:      String,       // A unique identifier for this specific macro instance, e.g., "promptId-charIndex".
-     *   full:    String,       // The full, original macro string, e.g., "{{setvar::x::10}}".
-     *   type:    String,       // The parsed type of the macro, e.g., "setvar", "getvar", "comment", "random".
-     *   varName: String|null,  // The variable name, if applicable (for "setvar" and "getvar").
-     *   value:   String|null,  // The value being set, if applicable (for "setvar").
-     *   params:  Array<String> // An array of parameters for other macro types like "random::a::b".
-     * }
-     * ----------------------------------------------------------------
-     */
-
-    // --- Unified Macro Analysis (The new core) ---
+    // --- Unified Macro Analysis ---
     analyzeAllMacros() {
-      console.log('[analyzeAllMacros] Starting analysis with new unified parser...');
+      console.log('[analyzeAllMacros] Starting analysis focused on promptOrder...');
 
-      // Regex to capture the entire macro and its content
+      // --- Pre-analysis: Clear stale macro data from all prompts ---
+      Object.values(this.prompts).forEach((p) => {
+        p.macros = [];
+      });
+
+      // --- Pass 1: Parse macros only for prompts currently in the order ---
       const macroRegex = /{{\s*(.*?)\s*}}/gs;
+      this.promptOrder.forEach((promptId) => {
+        /** @type {PartialPrompt} */
+        const prompt = this.prompts[promptId];
+        if (!prompt) return;
 
-      // --- Pass 1: Parse all macros and store structured data directly on prompts ---
-      console.log('[analyzeAllMacros] Pass 1: Parsing all prompts...');
-      Object.values(this.prompts).forEach((prompt) => {
-        const content = prompt.content || '';
+        /** @type {MacroData[]} */
         const macros = [];
+        const content = prompt.content || '';
         let match;
         while ((match = macroRegex.exec(content)) !== null) {
           const fullMatch = match[0];
           const innerContent = match[1].trim();
+
+          /** @type {MacroData} */
           const macroData = {
-            id: `${prompt.id}-${match.index}`, // Unique ID based on prompt and position
+            id: `${prompt.id}-${match.index}`,
             full: fullMatch,
             type: 'unknown',
             varName: null,
             value: null,
             params: [],
           };
-
           if (innerContent.startsWith('//')) {
             macroData.type = 'comment';
           } else if (innerContent.startsWith('setvar::')) {
@@ -182,83 +191,81 @@ export const usePresetStore = defineStore('preset', {
             macroData.type = 'getvar';
             macroData.varName = innerContent.substring('getvar::'.length).trim();
           } else {
-            // Handle other macro types like 'random', 'roll', etc.
             const [type, ...params] = innerContent.split('::').map((p) => p.trim());
             macroData.type = type || 'unknown';
             macroData.params = params;
           }
           macros.push(macroData);
         }
-        // Store the structured macro information directly on the prompt object
-        prompt.macros = macros;
-        if (macros.length > 0) {
-          console.log(
-            `[analyzeAllMacros] Parsed ${macros.length} macros for prompt ${prompt.id}:`,
-            JSON.parse(JSON.stringify(macros)),
-          );
-        }
+
+        prompt.macros = macros; // Attach parsed macros
       });
 
-      // --- Pass 2: Build execution flow and variable states from ordered prompts ---
-      console.log('[analyzeAllMacros] Pass 2: Simulating execution flow...');
-      const executionFlow = [];
-      this.promptOrder.forEach((promptId) => {
-        const prompt = this.prompts[promptId];
-        if (prompt && prompt.enabled && prompt.macros) {
-          executionFlow.push(...prompt.macros);
-        }
-      });
+      // --- Pass 2: Consolidated Analysis (based on promptOrder) ---
+      const allVarNames = new Set();
+      const definitions = {}; // { varName: [{ promptId, enabled }, ...] }
+      const references = {}; // { varName: [{ promptId, enabled }, ...] }
 
+      // --- Pass 3: Simulation and Aggregation ---
       const newSnapshots = {};
       let currentVarState = {};
-      const allVarNames = new Set();
-      const definitions = {}; // { varName: [macroId, ...] }
-      const references = {}; // { varName: [macroId, ...] }
 
-      executionFlow.forEach((macro) => {
-        if (macro.varName) {
-          allVarNames.add(macro.varName);
-        }
-
-        if (macro.type === 'setvar') {
-          currentVarState[macro.varName] = macro.value;
-          if (!definitions[macro.varName]) definitions[macro.varName] = [];
-          definitions[macro.varName].push(macro.id);
-        } else if (macro.type === 'getvar') {
-          newSnapshots[macro.id] = currentVarState[macro.varName]; // Snapshot value at this point
-          if (!references[macro.varName]) references[macro.varName] = [];
-          references[macro.varName].push(macro.id);
-        }
-      });
-      console.log(
-        '[analyzeAllMacros] Pass 2 complete. Snapshots:',
-        JSON.parse(JSON.stringify(newSnapshots)),
+      // Build the full execution flow for value lookups first
+      /** @type {MacroData[]} */
+      const executionFlowMacros = this.promptOrder.flatMap(
+        (promptId) => this.prompts[promptId]?.macros || [],
       );
 
-      // --- Pass 3: Finalize variable analysis (definitions, references, unresolved) ---
-      console.log('[analyzeAllMacros] Pass 3: Finalizing variable analysis...');
-      const newVariables = {};
-      const newUnresolved = new Set(); // Use a Set to avoid duplicate unresolved entries
+      executionFlowMacros.forEach((macro) => {
+        // Static analysis part: build full definition/reference maps
+        if (macro.varName) {
+          allVarNames.add(macro.varName);
+          const prompt = this.prompts[macro.id.split('-').slice(0, -1).join('-')];
+          const refInfo = { promptId: prompt.id, enabled: prompt.enabled !== false };
 
+          if (macro.type === 'setvar') {
+            if (!definitions[macro.varName]) definitions[macro.varName] = [];
+            definitions[macro.varName].push(refInfo);
+          } else if (macro.type === 'getvar') {
+            if (!references[macro.varName]) references[macro.varName] = [];
+            references[macro.varName].push(refInfo);
+          }
+        }
+
+        // Simulation part: update state only if the parent prompt is enabled
+        if (macro.type === 'setvar') {
+          const prompt = this.prompts[macro.id.split('-').slice(0, -1).join('-')];
+          if (prompt.enabled !== false) {
+            currentVarState[macro.varName] = macro.value;
+          }
+        } else if (macro.type === 'getvar') {
+          newSnapshots[macro.id] = currentVarState[macro.varName];
+        }
+      });
+
+      const newVariables = {};
+      const newUnresolved = new Set();
       allVarNames.forEach((varName) => {
         const defs = definitions[varName] || [];
         const refs = references[varName] || [];
+        const uniqueDefs = Array.from(new Map(defs.map((item) => [item.promptId, item])).values());
+        const uniqueRefs = Array.from(new Map(refs.map((item) => [item.promptId, item])).values());
+
         newVariables[varName] = {
-          definedIn: [...new Set(defs.map((macroId) => this.findPromptIdByMacroId(macroId)))],
-          referencedIn: [...new Set(refs.map((macroId) => this.findPromptIdByMacroId(macroId)))],
+          definedIn: uniqueDefs,
+          referencedIn: uniqueRefs,
         };
 
-        if (defs.length === 0 && refs.length > 0) {
+        if (uniqueDefs.length === 0 && uniqueRefs.length > 0) {
           newUnresolved.add(varName);
         }
       });
 
       this.variables = newVariables;
-      // Convert Set to array for component consumption
       this.unresolvedVariables = Array.from(newUnresolved).map((varName) => ({ varName }));
       this.macroStateSnapshots = newSnapshots;
 
-      console.log('[analyzeAllMacros] Analysis complete.');
+      console.log('[analyzeAllMacros] Analysis focused on promptOrder complete.');
     },
 
     findPromptIdByMacroId(macroId) {

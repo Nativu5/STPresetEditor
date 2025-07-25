@@ -96,6 +96,7 @@ import { Switch, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
 import { Bars3Icon, EllipsisVerticalIcon, EyeSlashIcon, TrashIcon } from '@heroicons/vue/20/solid';
 
 const props = defineProps({
+  /** @type {import('vue').PropType<import('../../stores/presetStore').PartialPrompt>} */
   prompt: {
     type: Object,
     required: true,
@@ -121,6 +122,9 @@ const isEnabled = computed({
   },
 });
 
+/**
+ * @returns {Array<{isMacro: boolean, content?: string, macroData?: import('../../stores/presetStore').MacroData}>}
+ */
 const contentParts = computed(() => {
   const content = props.prompt.content || '';
   const macros = props.prompt.macros || [];

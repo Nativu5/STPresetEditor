@@ -57,6 +57,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { debounce } from 'lodash-es';
 import { usePresetStore } from '../../stores/presetStore';
 import PromptLibraryItem from './PromptLibraryItem.vue';
 import {
@@ -69,11 +70,8 @@ import {
 const store = usePresetStore();
 const prompts = computed(() => store.libraryPrompts);
 
-let debounceTimer = null;
-const onSearch = (event) => {
-  window.clearTimeout(debounceTimer);
-  debounceTimer = window.setTimeout(() => {
-    store.setLibrarySearch(event.target.value);
-  }, 300); // 300ms debounce delay
-};
+// Use lodash-es for a more robust and consistent debounce implementation
+const onSearch = debounce((event) => {
+  store.setLibrarySearch(event.target.value);
+}, 500); // 500ms debounce delay as requested
 </script>

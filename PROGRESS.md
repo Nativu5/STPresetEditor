@@ -94,61 +94,65 @@
 
 ## 三、关键代码算法解析
 
-### 1. `prompt_order` 的精确解析与更新
+### 1. `preset.json` 的精确读写
 
-为了保证编辑器只操作 `character_id` 为 `100001` 的数据，同时不破坏文件中其他角色的配置，我们实现了精确的读写逻辑。
+为保证编辑器只操作特定角色 (`character_id: 100001`) 的数据，同时不破坏文件中其他角色的配置，我们实现了精确的读写逻辑。
 
-- **解析 (`parseFromJson`)**: 在解析 JSON 时，代码会遍历 `prompt_order` 数组，使用 `find` 方法定位到 `character_id` 为 `100001` 的对象。然后，只提取该对象内部的 `order` 数组作为编辑器的数据源。同时，`order` 数组中的 `enabled` 状态会被同步到 `prompts` 库中对应的 Prompt 对象上，确保状态的统一。
-- **导出 (`finalJson` Getter)**: 在生成最终 JSON 时，代码会先深拷贝原始 JSON 结构。然后，同样定位到 `character_id: 100001` 的对象，并用当前编辑器中的 `promptOrder` 状态去**覆盖**其 `order` 字段。`prompt_order` 数组中的任何其他对象都保持原样，从而实现了安全、精确的“原地更新”。
+- **解析 (`parseFromJson`)**: 加载时，代码会遍历 `prompt_order` 数组，定位到目标角色，并只提取其 `order` 数组作为编辑器的数据源。同时，`order` 中的 `enabled` 状态会被同步到 `prompts` 库中对应的 Prompt 对象上，确保状态统一。
+- **导出 (`finalJson` Getter)**: 导出时，代码会先深拷贝原始 JSON 结构，再次定位到目标角色，并仅用当前编辑器的 `promptOrder` 状态去覆盖其 `order` 字段，从而实现安全、精确的“原地更新”。此外，在导出 `prompts` 数组前，会先将其内部用于优化的 `macros` 临时属性移除，确保输出的 JSON 纯净且兼容。
 
-### 2. 统一宏分析与结构化数据 (`analyzeAllMacros`)
+### 2. 统一宏分析引擎 (`analyzeAllMacros`)
 
-宏系统是编辑器的核心，其关键在于 `analyzeAllMacros` 这个统一分析函数。为实现高性能和高可维护性，该函数采用“一次解析，处处使用”的原则，将宏的解析与后续的分析流程完全分离。
+宏系统是编辑器的核心，其关键在于 `analyzeAllMacros` 这个统一分析函数。为实现高性能和高可维护性，该函数采用“一次解析，处处使用”的原则，并将分析范围严格限定在用户当前可见的 `prompt_order` 序列中，确保分析结果与用户预期完全一致。
+
+**核心原则：聚焦 `prompt_order`**
+
+分析流程严格遵循以 `prompt_order` 为中心的原则。任何不在 `prompt_order` 数组中的 Prompt（即被“隐藏”的 Prompt）都不会被纳入宏分析的范围。这确保了变量的定义、引用和实时值计算都只在当前有效的上下文中进行。
 
 **核心数据结构：`macroData` 对象**
 
-分析流程的第一步，是将所有 Prompt 内容中的宏文本（`{{...}}`）解析为一个标准化的 `macroData` 对象。这个对象是整个系统消费的最小单元，它被直接附加到 `presetStore` 中对应的 Prompt 对象上。
+分析流程的第一步，是将 `prompt_order` 中所有 Prompt 内容里的宏文本（`{{...}}`）解析为一个标准化的 `macroData` 对象。这个对象是整个系统消费的最小单元，它被直接附加到 `presetStore` 中对应的 Prompt 对象上。
 
 `macroData` 对象的结构如下：
 
-| 字段      | 类型            | 描述                                                         |
-| :-------- | :-------------- | :----------------------------------------------------------- | ---------------------------- |
-| `id`      | `String`        | 宏实例的唯一 ID，由 `promptId` 和其在内容中的起始位置构成。  |
-| `full`    | `String`        | 完整的宏文本，例如 `{{setvar::x::10}}`。                     |
-| `type`    | `String`        | 解析后的宏类型，如 `setvar`, `getvar`, `comment`, `random`。 |
-| `varName` | `String         | null`                                                        | 宏关联的变量名（如果适用）。 |
-| `value`   | `String         | null`                                                        | `setvar` 宏所设定的值。      |
-| `params`  | `Array<String>` | 其他类型宏的参数列表，例如 `random` 宏的选项。               |
+| 字段      | 类型             | 描述                                                         |
+| :-------- | :--------------- | :----------------------------------------------------------- |
+| `id`      | `string`         | 宏实例的唯一 ID，由 `promptId` 和其在内容中的起始位置构成。  |
+| `full`    | `string`         | 完整的宏文本，例如 `{{setvar::x::10}}`。                     |
+| `type`    | `string`         | 解析后的宏类型，如 `setvar`, `getvar`, `comment`, `random`。 |
+| `varName` | `string \| null` | 宏关联的变量名（如果适用）。                                 |
+| `value`   | `string \| null` | `setvar` 宏所设定的值。                                      |
+| `params`  | `string[]`       | 其他类型宏的参数列表，例如 `random` 宏的选项。               |
 
-**三阶段分析法 (3-Pass Analysis)**
+**多阶段分析法 (Multi-Pass Analysis)**
 
-在所有宏都被解析为 `macroData` 对象后，系统会采用一个逻辑清晰的三阶段设计，来完成后续的分析：
+1.  **预处理：清理阶段 (Cleanup Pass)**
+    -   在每次分析开始时，系统会先遍历所有 `prompts` 对象，将它们附带的旧 `macros` 数组清空。这确保了被移出 `prompt_order` 的 Prompt 不会携带任何过时的宏信息，保证了状态的纯净。
 
-1.  **第一阶段：结构化解析 (Parsing Pass):**
-    - 遍历所有 `prompts` 对象，使用正则表达式 `/{{\s*(.*?)\s*}}/gs` 查找其 `content` 中的所有宏。
-    - 将每个找到的宏转换为标准化的 `macroData` 对象。
-    - 将生成的 `macroData` 对象数组存放在对应 Prompt 的 `macros` 属性上。此阶段完成后，所有组件都将直接消费这些预解析的数据，无需再进行任何独立的解析。
+2.  **第一阶段：结构化解析 (Parsing Pass)**
+    -   遍历 `prompt_order` 数组，只对当前序列中的 Prompt 进行处理。
+    -   使用正则表达式 `/{{\s*(.*?)\s*}}/gs` 查找其 `content` 中的所有宏，并转换为标准化的 `macroData` 对象。
+    -   将生成的 `macroData` 对象数组存放在对应 Prompt 的 `macros` 属性上。
 
-2.  **第二阶段：状态模拟与快照 (Simulation & Snapshot Pass):**
-    - 严格按照 `promptOrder` 顺序，从启用的 Prompt 中收集所有 `macroData` 对象，形成一个扁平化的“执行流”数组。
-    - 遍历此执行流，模拟宏的执行：
-      - 维护一个临时的 `currentVarState` 对象来追踪变量的当前值。
-      - 遇到 `setvar`，则更新 `currentVarState`。
-      - 遇到 `getvar`，则从 `currentVarState` 中读取当前值，并为该 `getvar` 宏的 `id` 生成一个“值快照”，存入 `macroStateSnapshots` 对象中，供 UI 悬浮提示使用。
-    - 同时，在此阶段记录所有变量的定义（`definitions`）和引用（`references`）位置（通过宏 ID）。
+3.  **第二阶段：模拟与分析 (Simulation & Analysis Pass)**
+    -   首先，使用 `flatMap` 从 `prompt_order` 中高效地构建出一个包含所有相关宏的扁平化“执行流”数组 (`executionFlowMacros`)。
+    -   遍历此执行流，**同时执行**静态分析和运行时模拟：
+        -   **静态分析**：无条件记录所有 `setvar` 和 `getvar` 的定义与引用信息（包括其所在 Prompt 的 `enabled` 状态），用于构建完整的变量关系图。
+        -   **运行时模拟**：在同一个循环中，为 `getvar` 宏生成值快照。关键点在于，只有当一个 `setvar` 宏所在的 Prompt 的 `enabled` 状态为 `true` 时，它才被允许更新模拟中的变量状态。这确保了被禁用 Prompt 中的 `getvar` 依然能看到正确的上下文值。
 
-3.  **第三阶段：最终关联与聚合 (Association & Aggregation Pass):**
-    - 基于第二阶段收集的定义和引用信息，生成最终的 `variables` 状态，其中包含每个变量完整的 `definedIn` 和 `referencedIn` 列表（指向 Prompt ID）。
-    - 同时，识别出所有“有引用但无定义”的变量，生成 `unresolvedVariables` 列表，用于在 UI 上告警。
+4.  **第三阶段：结果聚合 (Aggregation Pass)**
+    -   基于第二阶段收集的完整定义/引用信息，生成最终的 `variables` 和 `unresolvedVariables` 状态，供整个 UI 使用。
+    -   将模拟中生成的 `macroStateSnapshots` 提交到 store。
 
-这个设计将重量级的解析工作仅执行一次，后续的模拟和分析都基于轻量化的结构化数据进行，确保了逻辑的清晰、准确和高性能。对于用户输入等高频操作，该函数的调用被 `debounce` (防抖) 处理，避免了不必要的重复计算，保证了 UI 的流畅性。
+这个设计将重量级的解析工作仅执行一次，后续的模拟和分析都在一个高效的循环中完成，确保了逻辑的清晰、准确和高性能。对于用户输入等高频操作，该函数的调用被 `debounce` (防抖) 处理，避免了不必要的重复计算，保证了 UI 的流畅性。
 
-### 3. 统一的渲染逻辑
+### 3. 统一的渲染与交互
 
-得益于 `analyzeAllMacros` 生成的结构化数据，下游组件的渲染逻辑得以极大简化：
+得益于 `analyzeAllMacros` 生成的结构化数据，下游组件的渲染和交互逻辑得以极大简化：
 
-- **`PromptCard.vue`**: 该组件不再需要使用正则表达式来分割普通文本和宏。它会直接遍历对应 Prompt 上的 `macros` 数组，结合 `content` 字符串的 `indexOf` 和 `substring` 方法，高效地将内容分割为文本和宏对象两部分，然后分发给不同的渲染器。
-- **`MacroRenderer.vue`**: 这是一个纯粹的展示组件。它接收一个完整的 `macroData` 对象作为 `prop`，并根据其 `type`、`varName` 等属性来决定应用何种高亮样式、是否显示悬浮提示等，完全无需进行任何内部解析。
+-   **`PromptCard.vue`**: 该组件不再需要自行解析宏。它会直接遍历对应 Prompt 上的 `macros` 数组，结合 `content` 字符串高效地将内容分割为文本和宏对象两部分，然后分发给不同的渲染器。
+-   **`MacroRenderer.vue`**: 这是一个纯粹的展示组件。它接收一个完整的 `macroData` 对象作为 `prop`，并根据其 `type`、`varName` 等属性来决定应用何种高亮样式、是否显示悬浮提示等，完全无需进行任何内部解析。
+-   **`MacroDetails.vue`**: 该组件用于展示变量的定义和引用列表。它消费 `variables` state 中包含 `enabled` 状态的数组，从而能通过简单的 `:class` 绑定，将来自未启用 Prompt 的引用以灰色样式进行区分，提升了用户体验。
 
 这种自顶向下的数据流确保了宏的解析与渲染逻辑的绝对一致，极大地提升了代码的可维护性。
 
@@ -158,14 +162,4 @@
 
 1.  **合法性与冲突检查**: 在执行重命名之前，会严格检查新变量名是否为空、是否包含空格或特殊字符，以及是否与现有变量名冲突。任何不符合规则的情况都会被阻止。
 2.  **全局替换**: 如果验证通过，算法会遍历所有 Prompt 的 `content` 字段。使用正则表达式（精确匹配 `setvar::` 和 `getvar::` 后面的变量名）进行全局替换，确保所有定义和引用该变量的地方都被同步更新。
-3.  **重新分析宏**: 在内容修改完成后，立即调用 `analyzeMacros()` action。这会强制系统重新扫描所有 Prompt，更新 `variables` 和 `unresolvedVariables` 状态，确保宏系统的数据始终与最新的 Prompt 内容保持一致。
-
-### 4. 宏解析与渲染一致性
-
-整个应用的宏解析和渲染逻辑已经统一，确保了跨行宏、包含特殊字符的宏内容能够被正确处理：
-
-1. **解析逻辑**: `presetStore.js` 使用正则表达式 `/{{\s*(.*?)\s*}}/gs` 来捕获所有宏，支持跨行匹配并确保无嵌套。
-2. **内容分割**: `PromptCard.vue` 使用正则表达式 `/({{\s*.*?\s*}})/gs` 分割普通文本和宏，确保跨行宏能够正确识别。
-3. **宏渲染**: `MacroRenderer.vue` 使用字符串查找方法解析宏类型和变量名，确保复杂内容能够正确渲染。
-
-这些改动确保了宏系统在解析、分割和渲染的各个环节都能正确处理复杂的宏内容。
+3.  **重新分析宏**: 在内容修改完成后，立即调用 `analyzeAllMacros()` action，强制系统重新扫描所有 Prompt，更新整个宏系统状态。

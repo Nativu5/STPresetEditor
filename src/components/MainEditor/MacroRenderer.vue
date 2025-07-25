@@ -47,6 +47,7 @@ import { usePresetStore } from '../../stores/presetStore';
 import { Popover, PopoverPanel } from '@headlessui/vue';
 
 const props = defineProps({
+  /** @type {import('vue').PropType<import('../../stores/presetStore').MacroData>} */
   macro: {
     type: Object,
     required: true,

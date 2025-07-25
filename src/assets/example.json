@@ -70,10 +70,10 @@
       "name": "Auxiliary Prompt",
       "system_prompt": true,
       "role": "system",
-      "content": "我被添加到编辑器中了！\n\n点击卡片右上角的开关，可以切换 Prompt 的启用状态。还可以在右上角的菜单中暂时隐藏 Prompt，或永久删除 Prompt。\n\n你可以在右侧自由编辑 Prompt 的信息。\n\n现在，请向下滚动查看宏（Macro) 的实例。",
+      "content": "我被添加到编辑器中了！\n\n点击卡片右上角的开关，可以切换 Prompt 的启用状态。还可以在右上角的菜单中暂时隐藏 Prompt，或永久删除 Prompt。\n\n你可以在右侧自由编辑 Prompt 的信息。\n\n现在，请向下滚动查看宏（Macro) 的实例。\n\n{{setvar::hiddenVar::123}}",
       "identifier": "nsfw",
       "id": "nsfw",
-      "enabled": true
+      "enabled": false
     },
     {
       "identifier": "dialogueExamples",
@@ -198,7 +198,7 @@
       "name": "Undefined Variable Example",
       "system_prompt": true,
       "role": "system",
-      "content": "{{getvar::undefinedVar}}\n引用的变量从未被赋值。",
+      "content": "{{getvar::undefinedVar}}\n引用的变量从未被赋值。\n\n{{getvar::hiddenVar}}\n引用的变量在当前编辑区不可见。",
       "identifier": "123e4567-e89b-12d3-a456-426614174004",
       "id": "123e4567-e89b-12d3-a456-426614174004",
       "enabled": true
