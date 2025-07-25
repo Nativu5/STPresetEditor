@@ -34,6 +34,7 @@ const parsedMacro = computed(() => {
     if (trimmedContent.startsWith('//')) return { type: '//', varName: null };
     if (trimmedContent.startsWith('random')) return { type: 'random', varName: null };
     if (trimmedContent.startsWith('roll')) return { type: 'roll', varName: null };
+    if (trimmedContent === 'user' || trimmedContent === 'char') return { type: trimmedContent, varName: null };
     return { type: 'unknown', varName: null };
   }
 
@@ -85,6 +86,10 @@ const macroStyle = computed(() => {
     case 'random':
     case 'roll':
       styles.push('bg-purple-100 text-purple-700');
+      break;
+    case 'user':
+    case 'char':
+      styles.push('bg-yellow-300 text-yellow-700');
       break;
     default:
       if (props.content.startsWith('//')) {
