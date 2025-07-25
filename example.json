@@ -1,0 +1,282 @@
+{
+    "blockentropy_model": "be-70b-base-llama3.1",
+    "temperature": 0.75,
+    "frequency_penalty": 0,
+    "presence_penalty": 0,
+    "top_p": 1,
+    "top_k": 0,
+    "top_a": 0,
+    "min_p": 0,
+    "repetition_penalty": 1,
+    "openai_max_context": 2000000,
+    "openai_max_tokens": 16384,
+    "wrap_in_quotes": false,
+    "names_behavior": 0,
+    "send_if_empty": "",
+    "jailbreak_system": false,
+    "impersonation_prompt": "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]",
+    "new_chat_prompt": "[Start a new Chat]",
+    "new_group_chat_prompt": "[Start a new group chat. Group members: {{group}}]",
+    "new_example_chat_prompt": "[Example Chat]",
+    "continue_nudge_prompt": "[Continue the following message. Do not include ANY parts of the original message. Use capitalization and punctuation as if your reply is a part of the original message: {{lastChatMessage}}]",
+    "bias_preset_selected": "Default (none)",
+    "max_context_unlocked": true,
+    "wi_format": "{0}",
+    "scenario_format": "{{scenario}}",
+    "personality_format": "{{personality}}",
+    "group_nudge_prompt": "[Write the next reply only as {{char}}.]",
+    "stream_openai": true,
+    "prompts": [
+        {
+            "name": "Main Prompt",
+            "system_prompt": true,
+            "role": "system",
+            "content": "你是运行在 SillyTavern 程序中的 AI 模型。你正在和参与 {{char}} 和 {{user}} 之间的对话。你需要编写 {{char}} 的下一条回复。在回复时需要遵守以下规则：\n- 保持人称的一致性。如果 {{user}} 使用第一人称，则说明当前在进行角色扮演任务，你同样需要使用第一人称描述 {{char}}。如果 {{user}} 使用第三人称，说明当前在进行小说续写任务，你可以自由地组织语言。\n- 我们正在进行通俗、直白的对话。在 {{user}} 明确要求之前，你不能使用任何严肃的科学名词、魔法或玄幻用词。尽量使用模糊的用语替代具体的数字。禁止使用过度夸张的修辞手法和意象、暗喻等不容易被人理解的事物。\n- 禁止在对话中添加 {{user}} 未提到过的事物、情节，保证 {{user}} 拥有完全的控制权。",
+            "identifier": "main",
+            "injection_position": 0,
+            "injection_depth": 4,
+            "forbid_overrides": false
+        },
+        {
+            "name": "Variable Example",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{setvar::language::中文}}\n当前语言设置为 {{getvar::language}}。",
+            "identifier": "variableExample"
+        },
+        {
+            "name": "Random Example",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{random::选项1::选项2::选项3}}",
+            "identifier": "randomExample"
+        },
+        {
+            "name": "Comment Example",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{//这是一个注释宏，AI 会忽略此内容}}",
+            "identifier": "commentExample"
+        },
+        {
+            "name": "Auxiliary Prompt",
+            "system_prompt": true,
+            "role": "system",
+            "content": "",
+            "identifier": "nsfw"
+        },
+        {
+            "identifier": "dialogueExamples",
+            "name": "Chat Examples",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "name": "Post-History Instructions",
+            "system_prompt": true,
+            "role": "system",
+            "content": "",
+            "identifier": "jailbreak"
+        },
+        {
+            "identifier": "chatHistory",
+            "name": "Chat History",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "identifier": "worldInfoAfter",
+            "name": "World Info (after)",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "identifier": "worldInfoBefore",
+            "name": "World Info (before)",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "identifier": "enhanceDefinitions",
+            "role": "system",
+            "name": "Enhance Definitions",
+            "content": "If you have more knowledge of {{char}}, add to the character's lore and personality to enhance them but keep the Character Sheet's definitions absolute.",
+            "system_prompt": true,
+            "marker": false
+        },
+        {
+            "identifier": "charDescription",
+            "name": "Char Description",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "identifier": "charPersonality",
+            "name": "Char Personality",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "identifier": "scenario",
+            "name": "Scenario",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "identifier": "personaDescription",
+            "name": "Persona Description",
+            "system_prompt": true,
+            "marker": true
+        },
+        {
+            "name": "Custom Prompt 1",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{setvar::customVar1::value1}}\n使用变量 {{getvar::customVar1}} 进行自定义操作。",
+            "identifier": "123e4567-e89b-12d3-a456-426614174000"
+        },
+        {
+            "name": "Custom Prompt 2",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{random::选项A::选项B::选项C}}\n随机选择结果将影响后续逻辑。",
+            "identifier": "123e4567-e89b-12d3-a456-426614174001"
+        },
+        {
+            "name": "Custom Prompt 3",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{//这是一个复杂的注释宏，包含多行内容}}\n注释不会影响实际执行。",
+            "identifier": "123e4567-e89b-12d3-a456-426614174002"
+        },
+        {
+            "name": "Custom Prompt 4",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{setvar::customVar2::value2}}\n变量 {{getvar::customVar2}} 的值可以动态更新。",
+            "identifier": "123e4567-e89b-12d3-a456-426614174003"
+        },
+        {
+            "name": "Undefined Variable Example",
+            "system_prompt": true,
+            "role": "system",
+            "content": "当前使用未定义的变量 {{getvar::undefinedVar}}。",
+            "identifier": "123e4567-e89b-12d3-a456-426614174004"
+        },
+        {
+            "name": "Unused Variable Example",
+            "system_prompt": true,
+            "role": "system",
+            "content": "{{setvar::unusedVar::valueUnused}}\n此变量未被后续使用。",
+            "identifier": "123e4567-e89b-12d3-a456-426614174005"
+        }
+    ],
+    "prompt_order": [
+        {
+            "character_id": 100001,
+            "order": [
+                {
+                    "identifier": "main",
+                    "enabled": true
+                },
+                {
+                    "identifier": "variableExample",
+                    "enabled": true
+                },
+                {
+                    "identifier": "randomExample",
+                    "enabled": true
+                },
+                {
+                    "identifier": "commentExample",
+                    "enabled": true
+                },
+                {
+                    "identifier": "worldInfoBefore",
+                    "enabled": true
+                },
+                {
+                    "identifier": "personaDescription",
+                    "enabled": true
+                },
+                {
+                    "identifier": "charDescription",
+                    "enabled": true
+                },
+                {
+                    "identifier": "charPersonality",
+                    "enabled": true
+                },
+                {
+                    "identifier": "scenario",
+                    "enabled": true
+                },
+                {
+                    "identifier": "enhanceDefinitions",
+                    "enabled": false
+                },
+                {
+                    "identifier": "nsfw",
+                    "enabled": true
+                },
+                {
+                    "identifier": "worldInfoAfter",
+                    "enabled": true
+                },
+                {
+                    "identifier": "dialogueExamples",
+                    "enabled": true
+                },
+                {
+                    "identifier": "chatHistory",
+                    "enabled": true
+                },
+                {
+                    "identifier": "jailbreak",
+                    "enabled": true
+                },
+                {
+                    "identifier": "123e4567-e89b-12d3-a456-426614174000",
+                    "enabled": true
+                },
+                {
+                    "identifier": "123e4567-e89b-12d3-a456-426614174001",
+                    "enabled": true
+                },
+                {
+                    "identifier": "123e4567-e89b-12d3-a456-426614174002",
+                    "enabled": true
+                },
+                {
+                    "identifier": "123e4567-e89b-12d3-a456-426614174003",
+                    "enabled": true
+                },
+                {
+                    "identifier": "uuid-123e4567-e89b-12d3-a456-426614174004",
+                    "enabled": true
+                },
+                {
+                    "identifier": "uuid-123e4567-e89b-12d3-a456-426614174005",
+                    "enabled": true
+                }
+            ]
+        }
+    ],
+    "assistant_prefill": "",
+    "assistant_impersonation": "",
+    "claude_use_sysprompt": false,
+    "use_makersuite_sysprompt": true,
+    "squash_system_messages": false,
+    "image_inlining": false,
+    "inline_image_quality": "low",
+    "continue_prefill": false,
+    "continue_postfix": " ",
+    "function_calling": false,
+    "show_thoughts": true,
+    "reasoning_effort": "medium",
+    "seed": -1,
+    "n": 1,
+    "video_inlining": false,
+    "enable_web_search": false,
+    "request_images": false
+}

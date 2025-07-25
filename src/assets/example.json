@@ -1,0 +1,324 @@
+{
+  "blockentropy_model": "be-70b-base-llama3.1",
+  "temperature": 0.75,
+  "frequency_penalty": 0,
+  "presence_penalty": 0,
+  "top_p": 1,
+  "top_k": 0,
+  "top_a": 0,
+  "min_p": 0,
+  "repetition_penalty": 1,
+  "openai_max_context": 2000000,
+  "openai_max_tokens": 16384,
+  "wrap_in_quotes": false,
+  "names_behavior": 0,
+  "send_if_empty": "",
+  "jailbreak_system": false,
+  "impersonation_prompt": "[Write your next reply from the point of view of {{user}}, using the chat history so far as a guideline for the writing style of {{user}}. Don't write as {{char}} or system. Don't describe actions of {{char}}.]",
+  "new_chat_prompt": "[Start a new Chat]",
+  "new_group_chat_prompt": "[Start a new group chat. Group members: {{group}}]",
+  "new_example_chat_prompt": "[Example Chat]",
+  "continue_nudge_prompt": "[Continue the following message. Do not include ANY parts of the original message. Use capitalization and punctuation as if your reply is a part of the original message: {{lastChatMessage}}]",
+  "bias_preset_selected": "Default (none)",
+  "max_context_unlocked": true,
+  "wi_format": "{0}",
+  "scenario_format": "{{scenario}}",
+  "personality_format": "{{personality}}",
+  "group_nudge_prompt": "[Write the next reply only as {{char}}.]",
+  "stream_openai": true,
+  "prompts": [
+    {
+      "name": "Main Prompt",
+      "system_prompt": true,
+      "role": "system",
+      "content": "你是运行在 SillyTavern 程序中的 AI 模型。你正在和参与 {{char}} 和 {{user}} 之间的对话。你需要编写 {{char}} 的下一条回复。",
+      "identifier": "main",
+      "injection_position": 0,
+      "injection_depth": 4,
+      "forbid_overrides": false,
+      "id": "main",
+      "enabled": true
+    },
+    {
+      "name": "Variable Example",
+      "system_prompt": true,
+      "role": "system",
+      "content": "{{setvar::language::中文}}\n当前语言设置为 {{getvar::language}}。\n\n点击 setvar 或 getvar，在右侧查看详细的变量信息。\n\n点击右侧 Variables 选项卡，可以查看完整的变量列表、全局重命名变量。\n\n请继续向下滚动到底部，探索更多使用方式。",
+      "identifier": "variableExample",
+      "id": "variableExample",
+      "enabled": true
+    },
+    {
+      "name": "Random Example",
+      "system_prompt": true,
+      "role": "system",
+      "content": "{{random::选项1::选项2::选项3}}",
+      "identifier": "randomExample",
+      "id": "randomExample",
+      "enabled": true
+    },
+    {
+      "name": "Comment Example",
+      "system_prompt": true,
+      "role": "system",
+      "content": "{{//这是一个注释宏，AI 会忽略此内容}}\n{{//\n宏可以跨越多行；\n但不可以嵌套}}",
+      "identifier": "commentExample",
+      "id": "commentExample",
+      "enabled": true
+    },
+    {
+      "name": "Auxiliary Prompt",
+      "system_prompt": true,
+      "role": "system",
+      "content": "我被添加到编辑器中了！\n\n点击卡片右上角的开关，可以切换 Prompt 的启用状态。还可以在右上角的菜单中暂时隐藏 Prompt，或永久删除 Prompt。\n\n你可以在右侧自由编辑 Prompt 的信息。\n\n现在，请向下滚动查看宏（Macro) 的实例。",
+      "identifier": "nsfw",
+      "id": "nsfw",
+      "enabled": true
+    },
+    {
+      "identifier": "dialogueExamples",
+      "name": "Chat Examples",
+      "system_prompt": true,
+      "marker": true,
+      "id": "dialogueExamples",
+      "enabled": true
+    },
+    {
+      "name": "Post-History Instructions",
+      "system_prompt": true,
+      "role": "system",
+      "content": "",
+      "identifier": "jailbreak",
+      "id": "jailbreak",
+      "enabled": true
+    },
+    {
+      "identifier": "chatHistory",
+      "name": "Chat History",
+      "system_prompt": true,
+      "marker": true,
+      "id": "chatHistory",
+      "enabled": true
+    },
+    {
+      "identifier": "worldInfoAfter",
+      "name": "World Info (after)",
+      "system_prompt": true,
+      "marker": true,
+      "id": "worldInfoAfter",
+      "enabled": true
+    },
+    {
+      "identifier": "worldInfoBefore",
+      "name": "World Info (before)",
+      "system_prompt": true,
+      "marker": true,
+      "id": "worldInfoBefore",
+      "enabled": true
+    },
+    {
+      "identifier": "enhanceDefinitions",
+      "role": "system",
+      "name": "Enhance Definitions",
+      "content": "If you have more knowledge of {{char}}, add to the character's lore and personality to enhance them but keep the Character Sheet's definitions absolute.",
+      "system_prompt": true,
+      "marker": false,
+      "id": "enhanceDefinitions",
+      "enabled": false
+    },
+    {
+      "identifier": "charDescription",
+      "name": "Char Description",
+      "system_prompt": true,
+      "marker": true,
+      "id": "charDescription",
+      "enabled": true
+    },
+    {
+      "identifier": "charPersonality",
+      "name": "Char Personality",
+      "system_prompt": true,
+      "marker": true,
+      "id": "charPersonality",
+      "enabled": true
+    },
+    {
+      "identifier": "scenario",
+      "name": "Scenario",
+      "system_prompt": true,
+      "marker": true,
+      "id": "scenario",
+      "enabled": true
+    },
+    {
+      "identifier": "personaDescription",
+      "name": "Persona Description",
+      "system_prompt": true,
+      "marker": true,
+      "id": "personaDescription",
+      "enabled": true
+    },
+    {
+      "name": "Custom Prompt 1",
+      "system_prompt": true,
+      "role": "system",
+      "content": "{{setvar::customVar1::value1}}\n我们已经定义了customVar1。",
+      "identifier": "123e4567-e89b-12d3-a456-426614174000",
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "enabled": true
+    },
+    {
+      "name": "Custom Prompt 2",
+      "system_prompt": true,
+      "role": "system",
+      "content": "在后续 Prompt 中引用变量 {{getvar::customVar1}}。",
+      "identifier": "123e4567-e89b-12d3-a456-426614174001",
+      "id": "123e4567-e89b-12d3-a456-426614174001",
+      "enabled": true
+    },
+    {
+      "name": "Introduction",
+      "system_prompt": true,
+      "role": "system",
+      "content": "欢迎使用 SillyTavern 预设编辑器。\n\n所有的 Prompt 都在左侧 Prompt Library 中。点击左侧的 Prompt 可以快速导航到 Prompt 在编辑器中的位置。\n\n现在请在左侧找到 \"Auxiliary Prompt\"，点击 \"+\" 将其添加到编辑器中。",
+      "identifier": "123e4567-e89b-12d3-a456-426614174002",
+      "id": "123e4567-e89b-12d3-a456-426614174002",
+      "enabled": false
+    },
+    {
+      "name": "Conclusion",
+      "system_prompt": true,
+      "role": "system",
+      "content": "编辑器不会自动保存！\n\n在编辑之后，记得点击页面右上角的 Export 按钮自行保存修改后的 JSON 到本地。\n\n出现任何编辑错误，可以随时点击 Reset 返回导入时的状态。\n\n恭喜您完成了教程！Happy Editing！",
+      "identifier": "123e4567-e89b-12d3-a456-426614174003",
+      "id": "123e4567-e89b-12d3-a456-426614174003",
+      "enabled": true
+    },
+    {
+      "name": "Undefined Variable Example",
+      "system_prompt": true,
+      "role": "system",
+      "content": "{{getvar::undefinedVar}}\n引用的变量从未被赋值。",
+      "identifier": "123e4567-e89b-12d3-a456-426614174004",
+      "id": "123e4567-e89b-12d3-a456-426614174004",
+      "enabled": true
+    },
+    {
+      "name": "Unused Variable Example",
+      "system_prompt": true,
+      "role": "system",
+      "content": "{{setvar::unusedVar::valueUnused}}\n此变量未被后续使用。",
+      "identifier": "123e4567-e89b-12d3-a456-426614174005",
+      "id": "123e4567-e89b-12d3-a456-426614174005",
+      "enabled": true
+    }
+  ],
+  "prompt_order": [
+    {
+      "character_id": 100001,
+      "order": [
+        {
+          "identifier": "nsfw",
+          "enabled": true
+        },
+        {
+          "identifier": "123e4567-e89b-12d3-a456-426614174002",
+          "enabled": false
+        },
+        {
+          "identifier": "main",
+          "enabled": true
+        },
+        {
+          "identifier": "variableExample",
+          "enabled": true
+        },
+        {
+          "identifier": "randomExample",
+          "enabled": true
+        },
+        {
+          "identifier": "commentExample",
+          "enabled": true
+        },
+        {
+          "identifier": "worldInfoBefore",
+          "enabled": true
+        },
+        {
+          "identifier": "personaDescription",
+          "enabled": true
+        },
+        {
+          "identifier": "charDescription",
+          "enabled": true
+        },
+        {
+          "identifier": "charPersonality",
+          "enabled": true
+        },
+        {
+          "identifier": "scenario",
+          "enabled": true
+        },
+        {
+          "identifier": "enhanceDefinitions",
+          "enabled": false
+        },
+        {
+          "identifier": "worldInfoAfter",
+          "enabled": true
+        },
+        {
+          "identifier": "dialogueExamples",
+          "enabled": true
+        },
+        {
+          "identifier": "chatHistory",
+          "enabled": true
+        },
+        {
+          "identifier": "jailbreak",
+          "enabled": true
+        },
+        {
+          "identifier": "123e4567-e89b-12d3-a456-426614174000",
+          "enabled": true
+        },
+        {
+          "identifier": "123e4567-e89b-12d3-a456-426614174001",
+          "enabled": true
+        },
+        {
+          "identifier": "123e4567-e89b-12d3-a456-426614174005",
+          "enabled": true
+        },
+        {
+          "identifier": "123e4567-e89b-12d3-a456-426614174004",
+          "enabled": true
+        },
+        {
+          "identifier": "123e4567-e89b-12d3-a456-426614174003",
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "assistant_prefill": "",
+  "assistant_impersonation": "",
+  "claude_use_sysprompt": false,
+  "use_makersuite_sysprompt": true,
+  "squash_system_messages": false,
+  "image_inlining": false,
+  "inline_image_quality": "low",
+  "continue_prefill": false,
+  "continue_postfix": " ",
+  "function_calling": false,
+  "show_thoughts": true,
+  "reasoning_effort": "medium",
+  "seed": -1,
+  "n": 1,
+  "video_inlining": false,
+  "enable_web_search": false,
+  "request_images": false
+}

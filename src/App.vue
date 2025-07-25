@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { usePresetStore } from './stores/presetStore';
-import presetData from '../preset.example.json';
+import presetData from './assets/example.json';
 import PromptLibrary from './components/LeftSidebar/PromptLibrary.vue';
 import EditorView from './components/MainEditor/EditorView.vue';
 import RightSidebar from './components/RightSidebar/index.vue';

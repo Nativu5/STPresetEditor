@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center justify-between w-full">
-    <h1 class="text-xl font-bold text-gray-800">SillyTavern Preset Editor</h1>
+    <h1 class="text-xl font-bold text-gray-800">📝 SillyTavern Preset Editor</h1>
     <div class="flex items-center space-x-3">
       <button @click="$emit('open-import')" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
         <ArrowDownTrayIcon class="-ml-1 mr-2 h-5 w-5" />

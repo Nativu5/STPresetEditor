@@ -1,5 +1,5 @@
-/* Import Tailwind CSS */
-@import "tailwindcss"; /* Recommended when using Vite */
+/* Import Tailwind CSS (v4) */
+@import "tailwindcss";
 
 /* Custom Scrollbar Styles */
 ::-webkit-scrollbar {
@@ -27,6 +27,6 @@
   }
 
   .v-popper__arrow {
-    @apply text-white; /* 控制箭头颜色，受 inner 背景影响 */
+    @apply text-white;
   }
 }

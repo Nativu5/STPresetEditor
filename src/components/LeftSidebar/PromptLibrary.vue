@@ -8,7 +8,7 @@
           <PlusIcon class="h-5 w-5" />
         </button>
         <button @click="store.toggleMultiSelect()" class="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors" :class="{ 'bg-blue-100 text-blue-600': store.isMultiSelectActive }" title="Multi-select">
-          <ClipboardDocumentListIcon class="h-5 w-5" />
+          <ClipboardDocumentCheckIcon class="h-5 w-5" />
         </button>
         <button 
           @click="store.deleteSelectedPrompts()" 
@@ -54,7 +54,7 @@
 import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import PromptLibraryItem from './PromptLibraryItem.vue';
-import { PlusIcon, ClipboardDocumentListIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
+import { PlusIcon, ClipboardDocumentCheckIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 
 const store = usePresetStore();
 const prompts = computed(() => store.libraryPrompts);
