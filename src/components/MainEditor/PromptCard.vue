@@ -109,11 +109,11 @@ const isEnabled = computed({
 
 const parsedContent = computed(() => {
   const content = props.prompt.content || '';
-  const regex = /({{\s*.*?\s*}})/g;
+  const regex = /({{\s*.*?\s*}})/gs;
   const parts = content.split(regex).filter(part => part);
   
   return parts.map(part => {
-    const match = part.match(/^{{\s*(.*?)\s*}}$/);
+    const match = part.match(/^{{\s*(.*?)\s*}}$/s);
     if (match) {
       return { type: 'macro', value: match[1] };
     } else {

@@ -61,7 +61,7 @@ To ensure the editor only modifies data for a specific character (`character_id:
 
 ### 2. Macro Relationship Mapping
 A two-pass algorithm in the `analyzeMacros` action efficiently builds the variable definition-reference map:
-1.  **Scan & Classify**: A single pass with a regex (`/{{\s*(.*?)\s*}}/g`) iterates through all prompt content, classifying macros as `setvar` (definitions) or `getvar` (references).
+1.  **Scan & Classify**: A single pass with a regex (`/{{\s*(.*?)\s*}}/gs`) iterates through all prompt content, classifying macros as `setvar` (definitions) or `getvar` (references).
 2.  **Relate & Resolve**: A second, quick loop over the collected references populates the relationship map and identifies any `getvar` calls that lack a corresponding definition, flagging them for the UI.
 
 This approach ensures high performance and provides the robust data foundation for all macro-related features.

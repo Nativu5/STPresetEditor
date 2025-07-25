@@ -24,9 +24,35 @@ const store = usePresetStore();
 // Create the full macro string in the script section to avoid template parsing issues.
 const formattedMacro = computed(() => `{{${props.content}}}`);
 
-const parts = computed(() => props.content.split('::').map(p => p.trim()));
-const type = computed(() => parts.value[0]);
-const varName = computed(() => (type.value === 'getvar' || type.value === 'setvar') ? parts.value[1] : null);
+const parsedMacro = computed(() => {
+  const content = props.content;
+  const typeIndex = content.indexOf('::');
+
+  // Handle non-variable macros or malformed ones
+  if (typeIndex === -1) {
+    const trimmedContent = content.trim();
+    if (trimmedContent.startsWith('//')) return { type: '//', varName: null };
+    if (trimmedContent.startsWith('random')) return { type: 'random', varName: null };
+    if (trimmedContent.startsWith('roll')) return { type: 'roll', varName: null };
+    return { type: 'unknown', varName: null };
+  }
+
+  const type = content.substring(0, typeIndex).trim();
+  const rest = content.substring(typeIndex + 2);
+  let varName = null;
+
+  if (type === 'setvar') {
+    const nameIndex = rest.indexOf('::');
+    varName = (nameIndex !== -1) ? rest.substring(0, nameIndex).trim() : null;
+  } else if (type === 'getvar') {
+    varName = rest.trim();
+  }
+  
+  return { type, varName };
+});
+
+const type = computed(() => parsedMacro.value.type);
+const varName = computed(() => parsedMacro.value.varName);
 
 const isSelected = computed(() => {
     if (!store.selectedMacro || !varName.value) return false;

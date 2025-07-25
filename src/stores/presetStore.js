@@ -95,36 +95,48 @@ export const usePresetStore = defineStore('preset', {
     analyzeMacros() {
         const newVariables = {};
         const getVarRefs = [];
-        const macroRegex = /{{\s*(.*?)\s*}}/g;
+        const macroRegex = /{{\s*(.*?)\s*}}/gs;
         console.log('[analyzeMacros] Start analyzing macros...');
+        
         for (const promptId in this.prompts) {
             const prompt = this.prompts[promptId];
             const content = prompt.content || '';
             let match;
             while ((match = macroRegex.exec(content)) !== null) {
-                const parts = match[1].split('::').map(p => p.trim());
-                const type = parts[0];
-                if (type === 'setvar' && parts.length >= 2) {
-                    const varName = parts[1];
+                const matchContent = match[1];
+                const typeIndex = matchContent.indexOf('::');
+                if (typeIndex === -1) continue;
+
+                const type = matchContent.substring(0, typeIndex).trim();
+                const rest = matchContent.substring(typeIndex + 2);
+
+                console.log(`[analyzeMacros] Found macro in prompt '${promptId}': type='${type}', rest='${rest}'`);
+
+                if (type === 'setvar') {
+                    const nameIndex = rest.indexOf('::');
+                    if (nameIndex === -1) continue;
+                    const varName = rest.substring(0, nameIndex).trim();
+                    if (!varName) continue; // Skip if varName is empty
                     if (!newVariables[varName]) newVariables[varName] = { definedIn: [], referencedIn: [] };
                     newVariables[varName].definedIn.push(promptId);
-                    // console.log(`[analyzeMacros] setvar: '${varName}' defined in prompt '${promptId}'`);
-                } else if (type === 'getvar' && parts.length >= 2) {
-                    getVarRefs.push({ varName: parts[1], promptId });
-                    // console.log(`[analyzeMacros] getvar: '${parts[1]}' referenced in prompt '${promptId}'`);
+                } else if (type === 'getvar') {
+                    const varName = rest.trim();
+                    if (!varName) continue; // Skip if varName is empty
+                    getVarRefs.push({ varName, promptId });
                 }
             }
         }
+        
         this.unresolvedVariables = [];
         getVarRefs.forEach(({ varName, promptId }) => {
             if (newVariables[varName] && newVariables[varName].definedIn.length > 0) {
                 newVariables[varName].referencedIn.push(promptId);
-                console.log(`[analyzeMacros] getvar: '${varName}' resolved in prompt '${promptId}'`);
             } else {
                 this.unresolvedVariables.push({ varName, promptId });
                 console.warn(`[analyzeMacros] getvar: '${varName}' in prompt '${promptId}' is unresolved!`);
             }
         });
+
         this.variables = newVariables;
         console.log('[analyzeMacros] Variables:', newVariables);
         console.log('[analyzeMacros] Unresolved variables:', this.unresolvedVariables);
