@@ -2,9 +2,9 @@ import { defineStore } from 'pinia';
 
 export const usePresetStore = defineStore('preset', {
   state: () => ({
-    initialJson: '', 
-    rawJson: '', 
-    prompts: {}, 
+    initialJson: '',
+    rawJson: '',
+    prompts: {},
     promptOrder: [],
     selectedPromptId: null,
     selectedMacro: null,
@@ -21,45 +21,46 @@ export const usePresetStore = defineStore('preset', {
   }),
   getters: {
     isModified: (state) => {
-        if (!state.initialJson) return false;
-        // By parsing and re-stringifying the initial JSON, we ensure a consistent format for comparison.
-        const normalizedInitialJson = JSON.stringify(JSON.parse(state.initialJson), null, 2);
-        return normalizedInitialJson !== state.finalJson;
+      if (!state.initialJson) return false;
+      // By parsing and re-stringifying the initial JSON, we ensure a consistent format for comparison.
+      const normalizedInitialJson = JSON.stringify(JSON.parse(state.initialJson), null, 2);
+      return normalizedInitialJson !== state.finalJson;
     },
     getPromptById: (state) => (id) => {
       return state.prompts[id];
     },
     isPromptInOrder: (state) => (promptId) => {
-        return state.promptOrder.includes(promptId);
+      return state.promptOrder.includes(promptId);
     },
     definedVariables: (state) => {
-        return Object.keys(state.variables).sort();
+      return Object.keys(state.variables).sort();
     },
     orderedPrompts: (state) => {
       return state.promptOrder
-        .map(id => state.prompts[id] ? { ...state.prompts[id], id } : null)
-        .filter(p => p !== null);
+        .map((id) => (state.prompts[id] ? { ...state.prompts[id], id } : null))
+        .filter((p) => p !== null);
     },
     libraryPrompts: (state) => {
-        const allPrompts = Object.values(state.prompts).sort((a, b) => a.name.localeCompare(b.name));
-        if (!state.librarySearchTerm) {
-            return allPrompts;
-        }
-        const searchTerm = state.librarySearchTerm.toLowerCase();
-        return allPrompts.filter(p => 
-            p.name.toLowerCase().includes(searchTerm) || 
-            p.id.toLowerCase().includes(searchTerm)
-        );
+      const allPrompts = Object.values(state.prompts).sort((a, b) => a.name.localeCompare(b.name));
+      if (!state.librarySearchTerm) {
+        return allPrompts;
+      }
+      const searchTerm = state.librarySearchTerm.toLowerCase();
+      return allPrompts.filter(
+        (p) => p.name.toLowerCase().includes(searchTerm) || p.id.toLowerCase().includes(searchTerm),
+      );
     },
     finalJson: (state) => {
       const preset = JSON.parse(state.rawJson || '{}');
       preset.prompts = Object.values(state.prompts);
       if (Array.isArray(preset.prompt_order)) {
-        const characterOrderIndex = preset.prompt_order.findIndex(item => item.character_id === 100001);
+        const characterOrderIndex = preset.prompt_order.findIndex(
+          (item) => item.character_id === 100001,
+        );
         if (characterOrderIndex !== -1) {
-          preset.prompt_order[characterOrderIndex].order = state.promptOrder.map(id => ({
+          preset.prompt_order[characterOrderIndex].order = state.promptOrder.map((id) => ({
             identifier: id,
-            enabled: state.prompts[id]?.enabled !== false
+            enabled: state.prompts[id]?.enabled !== false,
           }));
         }
       }
@@ -68,93 +69,105 @@ export const usePresetStore = defineStore('preset', {
   },
   actions: {
     setInitialJson(jsonString) {
-        this.initialJson = jsonString;
-        this.parseFromJson(jsonString);
+      this.initialJson = jsonString;
+      this.parseFromJson(jsonString);
     },
     parseFromJson(jsonString) {
-        try {
-            this.rawJson = jsonString;
-            const parsed = JSON.parse(jsonString);
-            const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
-            this.prompts = promptsArray.reduce((acc, prompt) => {
-                const id = prompt.identifier || prompt.name;
-                if (id) acc[id] = { ...prompt, id };
-                return acc;
-            }, {});
-            const characterOrder = Array.isArray(parsed.prompt_order) ? parsed.prompt_order.find(item => item.character_id === 100001) : null;
-            if (characterOrder && Array.isArray(characterOrder.order)) {
-                const orderData = characterOrder.order;
-                this.promptOrder = orderData.map(item => item.identifier).filter(id => id in this.prompts);
-                orderData.forEach(item => {
-                    if (this.prompts[item.identifier]) this.prompts[item.identifier].enabled = item.enabled;
-                });
-            } else {
-                this.promptOrder = promptsArray.filter(p => p.enabled !== false).sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0)).map(p => p.identifier || p.name).filter(Boolean);
-            }
-            this.analyzeMacros();
-        } catch (error) {
-            console.error('Failed to parse JSON string:', error);
-            this.prompts = {};
-            this.promptOrder = [];
+      try {
+        this.rawJson = jsonString;
+        const parsed = JSON.parse(jsonString);
+        const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+        this.prompts = promptsArray.reduce((acc, prompt) => {
+          const id = prompt.identifier || prompt.name;
+          if (id) acc[id] = { ...prompt, id };
+          return acc;
+        }, {});
+        const characterOrder = Array.isArray(parsed.prompt_order)
+          ? parsed.prompt_order.find((item) => item.character_id === 100001)
+          : null;
+        if (characterOrder && Array.isArray(characterOrder.order)) {
+          const orderData = characterOrder.order;
+          this.promptOrder = orderData
+            .map((item) => item.identifier)
+            .filter((id) => id in this.prompts);
+          orderData.forEach((item) => {
+            if (this.prompts[item.identifier]) this.prompts[item.identifier].enabled = item.enabled;
+          });
+        } else {
+          this.promptOrder = promptsArray
+            .filter((p) => p.enabled !== false)
+            .sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0))
+            .map((p) => p.identifier || p.name)
+            .filter(Boolean);
         }
+        this.analyzeMacros();
+      } catch (error) {
+        console.error('Failed to parse JSON string:', error);
+        this.prompts = {};
+        this.promptOrder = [];
+      }
     },
     analyzeMacros() {
-        const newVariables = {};
-        const getVarRefs = [];
-        const macroRegex = /{{\s*(.*?)\s*}}/gs;
-        console.log('[analyzeMacros] Start analyzing macros...');
-        
-        for (const promptId in this.prompts) {
-            const prompt = this.prompts[promptId];
-            const content = prompt.content || '';
-            let match;
-            while ((match = macroRegex.exec(content)) !== null) {
-                const matchContent = match[1];
-                const typeIndex = matchContent.indexOf('::');
-                if (typeIndex === -1) continue;
+      const newVariables = {};
+      const getVarRefs = [];
+      const macroRegex = /{{\s*(.*?)\s*}}/gs;
+      console.log('[analyzeMacros] Start analyzing macros...');
 
-                const type = matchContent.substring(0, typeIndex).trim();
-                const rest = matchContent.substring(typeIndex + 2);
+      for (const promptId in this.prompts) {
+        const prompt = this.prompts[promptId];
+        const content = prompt.content || '';
+        let match;
+        while ((match = macroRegex.exec(content)) !== null) {
+          const matchContent = match[1];
+          const typeIndex = matchContent.indexOf('::');
+          if (typeIndex === -1) continue;
 
-                console.log(`[analyzeMacros] Found macro in prompt '${promptId}': type='${type}', rest='${rest}'`);
+          const type = matchContent.substring(0, typeIndex).trim();
+          const rest = matchContent.substring(typeIndex + 2);
 
-                if (type === 'setvar') {
-                    const nameIndex = rest.indexOf('::');
-                    if (nameIndex === -1) continue;
-                    const varName = rest.substring(0, nameIndex).trim();
-                    if (!varName) continue; // Skip if varName is empty
-                    if (!newVariables[varName]) newVariables[varName] = { definedIn: [], referencedIn: [] };
-                    newVariables[varName].definedIn.push(promptId);
-                } else if (type === 'getvar') {
-                    const varName = rest.trim();
-                    if (!varName) continue; // Skip if varName is empty
-                    getVarRefs.push({ varName, promptId });
-                }
-            }
+          console.log(
+            `[analyzeMacros] Found macro in prompt '${promptId}': type='${type}', rest='${rest}'`,
+          );
+
+          if (type === 'setvar') {
+            const nameIndex = rest.indexOf('::');
+            if (nameIndex === -1) continue;
+            const varName = rest.substring(0, nameIndex).trim();
+            if (!varName) continue; // Skip if varName is empty
+            if (!newVariables[varName]) newVariables[varName] = { definedIn: [], referencedIn: [] };
+            newVariables[varName].definedIn.push(promptId);
+          } else if (type === 'getvar') {
+            const varName = rest.trim();
+            if (!varName) continue; // Skip if varName is empty
+            getVarRefs.push({ varName, promptId });
+          }
         }
-        
-        this.unresolvedVariables = [];
-        getVarRefs.forEach(({ varName, promptId }) => {
-            if (newVariables[varName] && newVariables[varName].definedIn.length > 0) {
-                newVariables[varName].referencedIn.push(promptId);
-            } else {
-                this.unresolvedVariables.push({ varName, promptId });
-                console.warn(`[analyzeMacros] getvar: '${varName}' in prompt '${promptId}' is unresolved!`);
-            }
-        });
+      }
 
-        this.variables = newVariables;
-        console.log('[analyzeMacros] Variables:', newVariables);
-        console.log('[analyzeMacros] Unresolved variables:', this.unresolvedVariables);
+      this.unresolvedVariables = [];
+      getVarRefs.forEach(({ varName, promptId }) => {
+        if (newVariables[varName] && newVariables[varName].definedIn.length > 0) {
+          newVariables[varName].referencedIn.push(promptId);
+        } else {
+          this.unresolvedVariables.push({ varName, promptId });
+          console.warn(
+            `[analyzeMacros] getvar: '${varName}' in prompt '${promptId}' is unresolved!`,
+          );
+        }
+      });
+
+      this.variables = newVariables;
+      console.log('[analyzeMacros] Variables:', newVariables);
+      console.log('[analyzeMacros] Unresolved variables:', this.unresolvedVariables);
     },
     resetState() {
       if (this.initialJson) this.parseFromJson(this.initialJson);
     },
     updatePromptOrder(newOrder) {
-      this.promptOrder = newOrder.map(p => p.id);
+      this.promptOrder = newOrder.map((p) => p.id);
     },
     hidePrompt(promptId) {
-      this.promptOrder = this.promptOrder.filter(id => id !== promptId);
+      this.promptOrder = this.promptOrder.filter((id) => id !== promptId);
     },
     removePrompt(promptId) {
       delete this.prompts[promptId];
@@ -170,103 +183,111 @@ export const usePresetStore = defineStore('preset', {
       this.activeRightSidebarTab = 'details';
     },
     selectMacro(variableName) {
-        if (variableName) {
-            this.selectedMacro = { variableName };
-            this.selectedPromptId = null;
-            this.activeRightSidebarTab = 'details';
-        }
+      if (variableName) {
+        this.selectedMacro = { variableName };
+        this.selectedPromptId = null;
+        this.activeRightSidebarTab = 'details';
+      }
     },
     createNewPrompt() {
-        const newId = crypto.randomUUID();
-        const newPrompt = {
-            id: newId,
-            identifier: newId,
-            name: 'New Untitled Prompt',
-            content: '{{// This is a new prompt. Add your content here.}}',
-            enabled: false, 
-        };
-        this.prompts[newId] = newPrompt;
-        this.promptOrder.unshift(newId);
-        this.selectPrompt(newId);
-        this.navigateToPrompt(newId);
+      const newId = crypto.randomUUID();
+      const newPrompt = {
+        id: newId,
+        identifier: newId,
+        name: 'New Untitled Prompt',
+        content: '{{// This is a new prompt. Add your content here.}}',
+        enabled: false,
+      };
+      this.prompts[newId] = newPrompt;
+      this.promptOrder.unshift(newId);
+      this.selectPrompt(newId);
+      this.navigateToPrompt(newId);
     },
     toggleMultiSelect() {
-        this.isMultiSelectActive = !this.isMultiSelectActive;
-        this.selectedLibraryPrompts.clear();
+      this.isMultiSelectActive = !this.isMultiSelectActive;
+      this.selectedLibraryPrompts.clear();
     },
     toggleLibrarySelection(promptId) {
-        if (this.selectedLibraryPrompts.has(promptId)) {
-            this.selectedLibraryPrompts.delete(promptId);
-        } else {
-            this.selectedLibraryPrompts.add(promptId);
-        }
+      if (this.selectedLibraryPrompts.has(promptId)) {
+        this.selectedLibraryPrompts.delete(promptId);
+      } else {
+        this.selectedLibraryPrompts.add(promptId);
+      }
     },
     deleteSelectedPrompts() {
-        if (this.selectedLibraryPrompts.size === 0) return;
-        if (confirm(`Are you sure you want to permanently delete ${this.selectedLibraryPrompts.size} selected prompt(s)?`)) {
-            this.selectedLibraryPrompts.forEach(promptId => {
-                delete this.prompts[promptId];
-                this.promptOrder = this.promptOrder.filter(id => id !== promptId);
-            });
-            this.selectedLibraryPrompts.clear();
-            this.isMultiSelectActive = false;
-        }
+      if (this.selectedLibraryPrompts.size === 0) return;
+      if (
+        confirm(
+          `Are you sure you want to permanently delete ${this.selectedLibraryPrompts.size} selected prompt(s)?`,
+        )
+      ) {
+        this.selectedLibraryPrompts.forEach((promptId) => {
+          delete this.prompts[promptId];
+          this.promptOrder = this.promptOrder.filter((id) => id !== promptId);
+        });
+        this.selectedLibraryPrompts.clear();
+        this.isMultiSelectActive = false;
+      }
     },
     setLibrarySearch(term) {
-        this.librarySearchTerm = term;
-        this.selectedLibraryPrompts.clear();
+      this.librarySearchTerm = term;
+      this.selectedLibraryPrompts.clear();
     },
     navigateToPrompt(promptId) {
-        this.scrollToPromptId = promptId;
+      this.scrollToPromptId = promptId;
     },
     clearScrollToRequest() {
-        this.scrollToPromptId = null;
+      this.scrollToPromptId = null;
     },
     addPromptToOrder(promptId) {
-        if (!this.promptOrder.includes(promptId)) {
-            this.promptOrder.unshift(promptId);
-            this.navigateToPrompt(promptId);
-        }
+      if (!this.promptOrder.includes(promptId)) {
+        this.promptOrder.unshift(promptId);
+        this.navigateToPrompt(promptId);
+      }
     },
     updatePromptDetail({ promptId, field, value }) {
-        const prompt = this.prompts[promptId];
-        if (prompt && typeof field === 'string') {
-            prompt[field] = value;
-            if (field === 'content') {
-                this.analyzeMacros();
-            }
+      const prompt = this.prompts[promptId];
+      if (prompt && typeof field === 'string') {
+        prompt[field] = value;
+        if (field === 'content') {
+          this.analyzeMacros();
         }
+      }
     },
     setActiveRightSidebarTab(tabName) {
-        this.activeRightSidebarTab = tabName;
+      this.activeRightSidebarTab = tabName;
     },
     renameVariable({ oldName, newName }) {
-        const trimmedNewName = newName.trim();
-        if (!trimmedNewName || trimmedNewName.includes(' ') || (this.variables[trimmedNewName] && trimmedNewName !== oldName)) {
-            alert('Invalid or conflicting new variable name.');
-            return false;
+      const trimmedNewName = newName.trim();
+      if (
+        !trimmedNewName ||
+        trimmedNewName.includes(' ') ||
+        (this.variables[trimmedNewName] && trimmedNewName !== oldName)
+      ) {
+        alert('Invalid or conflicting new variable name.');
+        return false;
+      }
+
+      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const oldNameEscaped = escapeRegExp(oldName);
+
+      const setvarRegex = new RegExp(`({{\\s*setvar\\s*::)${oldNameEscaped}(\\s*::.*?\\s*}})`, 'g');
+      const getvarRegex = new RegExp(`({{\\s*getvar\\s*::)${oldNameEscaped}(\\s*}})`, 'g');
+
+      for (const promptId in this.prompts) {
+        const prompt = this.prompts[promptId];
+        if (prompt.content) {
+          prompt.content = prompt.content.replace(setvarRegex, `$1${trimmedNewName}$2`);
+          prompt.content = prompt.content.replace(getvarRegex, `$1${trimmedNewName}$2`);
         }
+      }
 
-        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const oldNameEscaped = escapeRegExp(oldName);
-
-        const setvarRegex = new RegExp(`({{\\s*setvar\\s*::)${oldNameEscaped}(\\s*::.*?\\s*}})`, 'g');
-        const getvarRegex = new RegExp(`({{\\s*getvar\\s*::)${oldNameEscaped}(\\s*}})`, 'g');
-
-        for (const promptId in this.prompts) {
-            const prompt = this.prompts[promptId];
-            if (prompt.content) {
-                prompt.content = prompt.content.replace(setvarRegex, `$1${trimmedNewName}$2`);
-                prompt.content = prompt.content.replace(getvarRegex, `$1${trimmedNewName}$2`);
-            }
-        }
-
-        this.analyzeMacros();
-        // After renaming, we might want to update the selection to the new name
-        if (this.selectedMacro && this.selectedMacro.variableName === oldName) {
-            this.selectMacro(trimmedNewName);
-        }
-        return true;
-    }
+      this.analyzeMacros();
+      // After renaming, we might want to update the selection to the new name
+      if (this.selectedMacro && this.selectedMacro.variableName === oldName) {
+        this.selectMacro(trimmedNewName);
+      }
+      return true;
+    },
   },
 });

@@ -1,14 +1,12 @@
 <template>
-  <draggable
-    v-model="prompts"
-    tag="div"
-    item-key="id"
-    class="space-y-4"
-    handle=".cursor-grab"
-  >
-    <template #item="{element}">
+  <draggable v-model="prompts" tag="div" item-key="id" class="space-y-4" handle=".cursor-grab">
+    <template #item="{ element }">
       <PromptCard
-        :ref="el => { if (el) promptCardRefs[element.id] = el }"
+        :ref="
+          (el) => {
+            if (el) promptCardRefs[element.id] = el;
+          }
+        "
         :prompt="element"
       />
     </template>
@@ -35,33 +33,41 @@ const prompts = computed({
   },
   set(newOrder) {
     store.updatePromptOrder(newOrder);
-  }
+  },
 });
 
-watch(() => store.scrollToPromptId, (newId) => {
-  if (newId) {
-    const cardComponent = promptCardRefs.value[newId];
-    if (cardComponent) {
-      const element = cardComponent.$el;
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      
-      // Flash animation
-      element.classList.add('flash-highlight');
-      setTimeout(() => {
-        element.classList.remove('flash-highlight');
-        store.clearScrollToRequest();
-      }, 1500); // Animation duration
+watch(
+  () => store.scrollToPromptId,
+  (newId) => {
+    if (newId) {
+      const cardComponent = promptCardRefs.value[newId];
+      if (cardComponent) {
+        const element = cardComponent.$el;
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Flash animation
+        element.classList.add('flash-highlight');
+        setTimeout(() => {
+          element.classList.remove('flash-highlight');
+          store.clearScrollToRequest();
+        }, 1500); // Animation duration
+      }
     }
-  }
-});
-
+  },
+);
 </script>
 
 <style scoped>
 @keyframes flash {
-  0% { background-color: rgba(74, 144, 226, 0); }
-  50% { background-color: rgba(74, 144, 226, 0.2); }
-  100% { background-color: rgba(74, 144, 226, 0); }
+  0% {
+    background-color: rgba(74, 144, 226, 0);
+  }
+  50% {
+    background-color: rgba(74, 144, 226, 0.2);
+  }
+  100% {
+    background-color: rgba(74, 144, 226, 0);
+  }
 }
 
 .flash-highlight {

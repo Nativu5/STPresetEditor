@@ -1,5 +1,5 @@
 /* Import Tailwind CSS (v4) */
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Custom Scrollbar Styles */
 ::-webkit-scrollbar {

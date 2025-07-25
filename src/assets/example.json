@@ -183,7 +183,7 @@
       "content": "欢迎使用 SillyTavern 预设编辑器。\n\n所有的 Prompt 都在左侧 Prompt Library 中。点击左侧的 Prompt 可以快速导航到 Prompt 在编辑器中的位置。\n\n现在请在左侧找到 \"Auxiliary Prompt\"，点击 \"+\" 将其添加到编辑器中。",
       "identifier": "123e4567-e89b-12d3-a456-426614174002",
       "id": "123e4567-e89b-12d3-a456-426614174002",
-      "enabled": false
+      "enabled": true
     },
     {
       "name": "Conclusion",
@@ -219,7 +219,7 @@
       "order": [
         {
           "identifier": "123e4567-e89b-12d3-a456-426614174002",
-          "enabled": false
+          "enabled": true
         },
         {
           "identifier": "main",

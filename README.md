@@ -10,7 +10,7 @@ A lightweight, user-friendly web editor for managing SillyTavern `preset.json` f
 
 ## 🚀 Overview
 
-The default SillyTavern preset editor offers basic functionality but can be slow and lacks advanced editing features (e.g., macro highlighting, variable management). 
+The default SillyTavern preset editor offers basic functionality but can be slow and lacks advanced editing features (e.g., macro highlighting, variable management).
 
 This project enhances your editing experience with an intuitive, high-performance and powerful UI/UX.
 

@@ -1,14 +1,14 @@
 <template>
-  <div 
+  <div
     @click="handleClick"
     class="p-2 mb-2 rounded-md shadow-sm border flex items-center justify-between cursor-pointer transition-colors duration-150 relative"
     :class="{
       'bg-blue-50 border-blue-300': isSelectedInLibrary,
-      'bg-white border-gray-200 hover:bg-gray-50': !isSelectedInLibrary
+      'bg-white border-gray-200 hover:bg-gray-50': !isSelectedInLibrary,
     }"
   >
     <div class="flex items-center flex-grow">
-      <input 
+      <input
         v-if="store.isMultiSelectActive"
         type="checkbox"
         :checked="isSelectedInLibrary"
@@ -23,10 +23,15 @@
     </div>
 
     <div class="flex-shrink-0 ml-2">
-        <button @click.stop="addOrNavigate" :title="isInOrder ? 'Prompt is already in the editor' : 'Add prompt to editor'" class="p-1 rounded-full hover:bg-gray-200 transition-colors" :disabled="isInOrder">
-            <CheckCircleIcon v-if="isInOrder" class="h-6 w-6 text-green-500" />
-            <PlusCircleIcon v-else class="h-6 w-6 text-gray-400 hover:text-gray-600" />
-        </button>
+      <button
+        @click.stop="addOrNavigate"
+        :title="isInOrder ? 'Prompt is already in the editor' : 'Add prompt to editor'"
+        class="p-1 rounded-full hover:bg-gray-200 transition-colors"
+        :disabled="isInOrder"
+      >
+        <CheckCircleIcon v-if="isInOrder" class="h-6 w-6 text-green-500" />
+        <PlusCircleIcon v-else class="h-6 w-6 text-gray-400 hover:text-gray-600" />
+      </button>
     </div>
   </div>
 </template>
@@ -50,7 +55,7 @@ const isSelectedInLibrary = computed(() => {
 });
 
 const isInOrder = computed(() => {
-    return store.isPromptInOrder(props.prompt.id);
+  return store.isPromptInOrder(props.prompt.id);
 });
 
 const handleClick = () => {
@@ -63,15 +68,14 @@ const handleClick = () => {
 };
 
 const addOrNavigate = () => {
-    if (isInOrder.value) {
-        store.navigateToPrompt(props.prompt.id);
-    } else {
-        store.addPromptToOrder(props.prompt.id);
-    }
-}
+  if (isInOrder.value) {
+    store.navigateToPrompt(props.prompt.id);
+  } else {
+    store.addPromptToOrder(props.prompt.id);
+  }
+};
 
 const toggleSelection = () => {
   store.toggleLibrarySelection(props.prompt.id);
 };
-
 </script>

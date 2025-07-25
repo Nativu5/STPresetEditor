@@ -24,8 +24,13 @@
             leave-from="opacity-100 scale-100"
             leave-to="opacity-0 scale-95"
           >
-            <DialogPanel class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-              <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900 flex items-center">
+            <DialogPanel
+              class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all"
+            >
+              <DialogTitle
+                as="h3"
+                class="text-lg font-medium leading-6 text-gray-900 flex items-center"
+              >
                 <ArrowDownTrayIcon class="h-6 w-6 mr-2 text-blue-600" />
                 Import from JSON
               </DialogTitle>
@@ -36,10 +41,10 @@
               </div>
 
               <div class="mt-4">
-                <textarea 
+                <textarea
                   v-model="jsonInput"
                   class="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder='{\n  "prompts": [...],\n  "prompt_order": [...]}'
+                  placeholder='{&#10;  "prompts": [...],&#10;  "prompt_order": [...]&#10;}'
                 ></textarea>
               </div>
 
@@ -69,13 +74,7 @@
 
 <script setup>
 import { ref, defineProps, defineEmits } from 'vue';
-import {
-  TransitionRoot,
-  TransitionChild,
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-} from '@headlessui/vue';
+import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 
 defineProps({

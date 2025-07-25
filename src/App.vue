@@ -29,7 +29,8 @@ onBeforeUnmount(() => {
 function handleBeforeUnload(event) {
   if (store.isModified) {
     event.preventDefault();
-    event.returnValue = 'You have unsaved changes in your JSON file. Are you sure you want to leave?';
+    event.returnValue =
+      'You have unsaved changes in your JSON file. Are you sure you want to leave?';
     return 'You have unsaved changes in your JSON file. Are you sure you want to leave?';
   }
 }
@@ -37,58 +38,52 @@ function handleBeforeUnload(event) {
 const handleImport = (jsonString) => {
   store.parseFromJson(jsonString);
 };
-
 </script>
 
 <template>
   <div id="app-container" class="flex flex-col h-screen bg-gray-100">
     <header class="bg-white shadow-md p-2 z-10 flex-shrink-0">
-      <Toolbar 
-        @open-import="isImportModalOpen = true"
-        @open-export="isExportModalOpen = true"
-      />
+      <Toolbar @open-import="isImportModalOpen = true" @open-export="isExportModalOpen = true" />
     </header>
 
     <main class="flex-1 overflow-hidden">
-        <splitpanes class="default-theme h-full">
-            <pane min-size="15" size="25">
-                <div class="p-4 h-full flex flex-col bg-gray-50">
-                    <PromptLibrary />
-                </div>
-            </pane>
-            <pane min-size="30" size="50">
-                <div class="p-4 h-full flex flex-col">
-                    <h2 class="text-lg font-semibold mb-4 flex-shrink-0">Editor</h2>
-                    <div class="overflow-y-auto">
-                        <EditorView />
-                    </div>
-                </div>
-            </pane>
-            <pane min-size="15" size="25">
-                <div class="p-4 h-full flex flex-col bg-gray-50">
-                    <RightSidebar />
-                </div>
-            </pane>
-        </splitpanes>
+      <splitpanes class="default-theme h-full">
+        <pane min-size="15" size="25">
+          <div class="p-4 h-full flex flex-col bg-gray-50">
+            <PromptLibrary />
+          </div>
+        </pane>
+        <pane min-size="30" size="50">
+          <div class="p-4 h-full flex flex-col">
+            <h2 class="text-lg font-semibold mb-4 flex-shrink-0">Editor</h2>
+            <div class="overflow-y-auto">
+              <EditorView />
+            </div>
+          </div>
+        </pane>
+        <pane min-size="15" size="25">
+          <div class="p-4 h-full flex flex-col bg-gray-50">
+            <RightSidebar />
+          </div>
+        </pane>
+      </splitpanes>
     </main>
 
     <!-- Modals -->
-    <JsonImportModal 
-      :is-open="isImportModalOpen" 
-      @close="isImportModalOpen = false" 
+    <JsonImportModal
+      :is-open="isImportModalOpen"
+      @close="isImportModalOpen = false"
       @import="handleImport"
     />
-    <JsonExportModal 
-      :is-open="isExportModalOpen" 
-      @close="isExportModalOpen = false" 
-    />
+    <JsonExportModal :is-open="isExportModalOpen" @close="isExportModalOpen = false" />
   </div>
 </template>
 
 <style>
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .splitpanes.default-theme .splitpanes__splitter {

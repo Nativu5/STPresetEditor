@@ -28,5 +28,4 @@ const selectedPrompt = computed(() => {
 });
 
 const selectedMacro = computed(() => store.selectedMacro);
-
 </script>

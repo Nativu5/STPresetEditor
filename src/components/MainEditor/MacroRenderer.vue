@@ -1,5 +1,9 @@
 <template>
-  <span :class="macroStyle" class="font-mono rounded px-1 py-0.5 mx-0.5 cursor-pointer transition-all duration-150" @click.stop="onClick">
+  <span
+    :class="macroStyle"
+    class="font-mono rounded px-1 py-0.5 mx-0.5 cursor-pointer transition-all duration-150"
+    @click.stop="onClick"
+  >
     {{ formattedMacro }}
   </span>
 </template>
@@ -16,7 +20,7 @@ const props = defineProps({
   promptId: {
     type: String,
     required: true,
-  }
+  },
 });
 
 const store = usePresetStore();
@@ -34,7 +38,8 @@ const parsedMacro = computed(() => {
     if (trimmedContent.startsWith('//')) return { type: '//', varName: null };
     if (trimmedContent.startsWith('random')) return { type: 'random', varName: null };
     if (trimmedContent.startsWith('roll')) return { type: 'roll', varName: null };
-    if (trimmedContent === 'user' || trimmedContent === 'char') return { type: trimmedContent, varName: null };
+    if (trimmedContent === 'user' || trimmedContent === 'char')
+      return { type: trimmedContent, varName: null };
     return { type: 'unknown', varName: null };
   }
 
@@ -44,11 +49,11 @@ const parsedMacro = computed(() => {
 
   if (type === 'setvar') {
     const nameIndex = rest.indexOf('::');
-    varName = (nameIndex !== -1) ? rest.substring(0, nameIndex).trim() : null;
+    varName = nameIndex !== -1 ? rest.substring(0, nameIndex).trim() : null;
   } else if (type === 'getvar') {
     varName = rest.trim();
   }
-  
+
   return { type, varName };
 });
 
@@ -56,13 +61,15 @@ const type = computed(() => parsedMacro.value.type);
 const varName = computed(() => parsedMacro.value.varName);
 
 const isSelected = computed(() => {
-    if (!store.selectedMacro || !varName.value) return false;
-    return store.selectedMacro.variableName === varName.value;
+  if (!store.selectedMacro || !varName.value) return false;
+  return store.selectedMacro.variableName === varName.value;
 });
 
 const isUnresolved = computed(() => {
   if (type.value !== 'getvar' || !varName.value) return false;
-  return store.unresolvedVariables.some(uv => uv.varName === varName.value && uv.promptId === props.promptId);
+  return store.unresolvedVariables.some(
+    (uv) => uv.varName === varName.value && uv.promptId === props.promptId,
+  );
 });
 
 const macroStyle = computed(() => {
@@ -106,5 +113,4 @@ const onClick = () => {
     store.selectMacro(varName.value);
   }
 };
-
 </script>
