@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, onBeforeUnmount } from 'vue';
 import { usePresetStore } from './stores/presetStore';
 import presetData from './assets/example.json';
 import PromptLibrary from './components/LeftSidebar/PromptLibrary.vue';
@@ -18,7 +18,21 @@ const isExportModalOpen = ref(false);
 
 onMounted(() => {
   store.setInitialJson(JSON.stringify(presetData));
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+});
+
+function handleBeforeUnload(event) {
+  if (store.isModified) {
+    event.preventDefault();
+    event.returnValue = 'You have unsaved changes in your JSON file. Are you sure you want to leave?';
+    return 'You have unsaved changes in your JSON file. Are you sure you want to leave?';
+  }
+}
 
 const handleImport = (jsonString) => {
   store.parseFromJson(jsonString);

@@ -20,6 +20,12 @@ export const usePresetStore = defineStore('preset', {
     activeRightSidebarTab: 'details', // 'details' or 'variables'
   }),
   getters: {
+    isModified: (state) => {
+        if (!state.initialJson) return false;
+        // By parsing and re-stringifying the initial JSON, we ensure a consistent format for comparison.
+        const normalizedInitialJson = JSON.stringify(JSON.parse(state.initialJson), null, 2);
+        return normalizedInitialJson !== state.finalJson;
+    },
     getPromptById: (state) => (id) => {
       return state.prompts[id];
     },
@@ -66,31 +72,31 @@ export const usePresetStore = defineStore('preset', {
         this.parseFromJson(jsonString);
     },
     parseFromJson(jsonString) {
-      try {
-        this.rawJson = jsonString;
-        const parsed = JSON.parse(jsonString);
-        const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
-        this.prompts = promptsArray.reduce((acc, prompt) => {
-            const id = prompt.identifier || prompt.name;
-            if (id) acc[id] = { ...prompt, id };
-            return acc;
-        }, {});
-        const characterOrder = Array.isArray(parsed.prompt_order) ? parsed.prompt_order.find(item => item.character_id === 100001) : null;
-        if (characterOrder && Array.isArray(characterOrder.order)) {
-            const orderData = characterOrder.order;
-            this.promptOrder = orderData.map(item => item.identifier).filter(id => id in this.prompts);
-            orderData.forEach(item => {
-                if (this.prompts[item.identifier]) this.prompts[item.identifier].enabled = item.enabled;
-            });
-        } else {
-            this.promptOrder = promptsArray.filter(p => p.enabled !== false).sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0)).map(p => p.identifier || p.name).filter(Boolean);
+        try {
+            this.rawJson = jsonString;
+            const parsed = JSON.parse(jsonString);
+            const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+            this.prompts = promptsArray.reduce((acc, prompt) => {
+                const id = prompt.identifier || prompt.name;
+                if (id) acc[id] = { ...prompt, id };
+                return acc;
+            }, {});
+            const characterOrder = Array.isArray(parsed.prompt_order) ? parsed.prompt_order.find(item => item.character_id === 100001) : null;
+            if (characterOrder && Array.isArray(characterOrder.order)) {
+                const orderData = characterOrder.order;
+                this.promptOrder = orderData.map(item => item.identifier).filter(id => id in this.prompts);
+                orderData.forEach(item => {
+                    if (this.prompts[item.identifier]) this.prompts[item.identifier].enabled = item.enabled;
+                });
+            } else {
+                this.promptOrder = promptsArray.filter(p => p.enabled !== false).sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0)).map(p => p.identifier || p.name).filter(Boolean);
+            }
+            this.analyzeMacros();
+        } catch (error) {
+            console.error('Failed to parse JSON string:', error);
+            this.prompts = {};
+            this.promptOrder = [];
         }
-        this.analyzeMacros();
-      } catch (error) {
-        console.error('Failed to parse JSON string:', error);
-        this.prompts = {};
-        this.promptOrder = [];
-      }
     },
     analyzeMacros() {
         const newVariables = {};
