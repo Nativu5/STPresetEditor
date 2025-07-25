@@ -1,6 +1,6 @@
 <template>
   <TransitionRoot appear :show="isOpen" as="template">
-    <Dialog as="div" @close="closeModal" class="relative z-50">
+    <Dialog as="div" class="relative z-50" @close="closeModal">
       <TransitionChild
         as="template"
         enter="duration-300 ease-out"
@@ -29,9 +29,9 @@
             >
               <DialogTitle
                 as="h3"
-                class="text-lg font-medium leading-6 text-gray-900 flex items-center"
+                class="flex items-center text-lg leading-6 font-medium text-gray-900"
               >
-                <ArrowUpTrayIcon class="h-6 w-6 mr-2 text-green-600" />
+                <ArrowUpTrayIcon class="mr-2 h-6 w-6 text-green-600" />
                 Export to JSON
               </DialogTitle>
               <div class="mt-2">
@@ -44,28 +44,28 @@
                 <textarea
                   :value="finalJson"
                   readonly
-                  class="w-full h-64 p-3 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm focus:ring-2 focus:ring-blue-500 transition"
-                ></textarea>
+                  class="h-64 w-full rounded-md border border-gray-300 bg-gray-50 p-3 font-mono text-sm transition focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               <div class="mt-6 flex justify-end space-x-3">
                 <button
                   type="button"
-                  class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 transition-colors"
+                  class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                   @click="closeModal"
                 >
                   Close
                 </button>
                 <button
                   type="button"
-                  class="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 transition-colors"
+                  class="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
                   @click="copyToClipboard"
                 >
                   <ClipboardDocumentIcon
-                    class="h-5 w-5 mr-2"
                     v-if="copyButtonText === 'Copy to Clipboard'"
+                    class="mr-2 h-5 w-5"
                   />
-                  <CheckIcon class="h-5 w-5 mr-2" v-else />
+                  <CheckIcon v-else class="mr-2 h-5 w-5" />
                   {{ copyButtonText }}
                 </button>
               </div>
@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-import { computed, ref, defineProps, defineEmits } from 'vue';
+import { computed, ref } from 'vue';
 import { usePresetStore } from '../stores/presetStore';
 import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
 import { ArrowUpTrayIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/vue/24/outline';
@@ -101,7 +101,7 @@ async function copyToClipboard() {
   try {
     await navigator.clipboard.writeText(finalJson.value);
     copyButtonText.value = 'Copied!';
-    setTimeout(() => {
+    window.setTimeout(() => {
       copyButtonText.value = 'Copy to Clipboard';
     }, 2000);
   } catch (err) {

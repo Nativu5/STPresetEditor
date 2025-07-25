@@ -109,10 +109,9 @@ export const usePresetStore = defineStore('preset', {
     },
     analyzeMacros() {
       const newVariables = {};
-      const getVarRefs = [];
       const macroRegex = /{{\s*(.*?)\s*}}/gs;
-      console.log('[analyzeMacros] Start analyzing macros...');
 
+      // First pass: collect all variable names and their locations
       for (const promptId in this.prompts) {
         const prompt = this.prompts[promptId];
         const content = prompt.content || '';
@@ -124,41 +123,50 @@ export const usePresetStore = defineStore('preset', {
 
           const type = matchContent.substring(0, typeIndex).trim();
           const rest = matchContent.substring(typeIndex + 2);
-
-          console.log(
-            `[analyzeMacros] Found macro in prompt '${promptId}': type='${type}', rest='${rest}'`,
-          );
+          let varName;
 
           if (type === 'setvar') {
             const nameIndex = rest.indexOf('::');
             if (nameIndex === -1) continue;
-            const varName = rest.substring(0, nameIndex).trim();
-            if (!varName) continue; // Skip if varName is empty
-            if (!newVariables[varName]) newVariables[varName] = { definedIn: [], referencedIn: [] };
+            varName = rest.substring(0, nameIndex).trim();
+          } else if (type === 'getvar') {
+            varName = rest.trim();
+          } else {
+            continue;
+          }
+
+          if (!varName) continue;
+
+          if (!newVariables[varName]) {
+            newVariables[varName] = { definedIn: [], referencedIn: [] };
+          }
+
+          if (type === 'setvar') {
             newVariables[varName].definedIn.push(promptId);
           } else if (type === 'getvar') {
-            const varName = rest.trim();
-            if (!varName) continue; // Skip if varName is empty
-            getVarRefs.push({ varName, promptId });
+            newVariables[varName].referencedIn.push(promptId);
           }
         }
       }
 
+      // Second pass: identify unresolved variables
       this.unresolvedVariables = [];
-      getVarRefs.forEach(({ varName, promptId }) => {
-        if (newVariables[varName] && newVariables[varName].definedIn.length > 0) {
-          newVariables[varName].referencedIn.push(promptId);
-        } else {
-          this.unresolvedVariables.push({ varName, promptId });
-          console.warn(
-            `[analyzeMacros] getvar: '${varName}' in prompt '${promptId}' is unresolved!`,
-          );
+      for (const varName in newVariables) {
+        const variable = newVariables[varName];
+        if (variable.definedIn.length === 0 && variable.referencedIn.length > 0) {
+          variable.referencedIn.forEach((promptId) => {
+            this.unresolvedVariables.push({ varName, promptId });
+            console.warn(
+              `[analyzeMacros] getvar: '${varName}' in prompt '${promptId}' is unresolved!`,
+            );
+          });
         }
-      });
+      }
 
       this.variables = newVariables;
-      console.log('[analyzeMacros] Variables:', newVariables);
-      console.log('[analyzeMacros] Unresolved variables:', this.unresolvedVariables);
+      console.log('[analyzeMacros] Variables analysis complete.');
+      console.log('[analyzeMacros] All variables (defined and undefined):', newVariables);
+      console.log('[analyzeMacros] Unresolved variable references:', this.unresolvedVariables);
     },
     resetState() {
       if (this.initialJson) this.parseFromJson(this.initialJson);
@@ -190,7 +198,7 @@ export const usePresetStore = defineStore('preset', {
       }
     },
     createNewPrompt() {
-      const newId = crypto.randomUUID();
+      const newId = window.crypto.randomUUID();
       const newPrompt = {
         id: newId,
         identifier: newId,
@@ -217,7 +225,7 @@ export const usePresetStore = defineStore('preset', {
     deleteSelectedPrompts() {
       if (this.selectedLibraryPrompts.size === 0) return;
       if (
-        confirm(
+        window.confirm(
           `Are you sure you want to permanently delete ${this.selectedLibraryPrompts.size} selected prompt(s)?`,
         )
       ) {
@@ -264,7 +272,7 @@ export const usePresetStore = defineStore('preset', {
         trimmedNewName.includes(' ') ||
         (this.variables[trimmedNewName] && trimmedNewName !== oldName)
       ) {
-        alert('Invalid or conflicting new variable name.');
+        window.alert('Invalid or conflicting new variable name.');
         return false;
       }
 

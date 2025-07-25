@@ -1,6 +1,6 @@
 <template>
   <TransitionRoot appear :show="isOpen" as="template">
-    <Dialog as="div" @close="closeModal" class="relative z-50">
+    <Dialog as="div" class="relative z-50" @close="closeModal">
       <TransitionChild
         as="template"
         enter="duration-300 ease-out"
@@ -29,9 +29,9 @@
             >
               <DialogTitle
                 as="h3"
-                class="text-lg font-medium leading-6 text-gray-900 flex items-center"
+                class="flex items-center text-lg leading-6 font-medium text-gray-900"
               >
-                <ArrowDownTrayIcon class="h-6 w-6 mr-2 text-blue-600" />
+                <ArrowDownTrayIcon class="mr-2 h-6 w-6 text-blue-600" />
                 Import from JSON
               </DialogTitle>
               <div class="mt-2">
@@ -43,22 +43,22 @@
               <div class="mt-4">
                 <textarea
                   v-model="jsonInput"
-                  class="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                  class="h-64 w-full rounded-md border border-gray-300 p-3 font-mono text-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   placeholder='{&#10;  "prompts": [...],&#10;  "prompt_order": [...]&#10;}'
-                ></textarea>
+                />
               </div>
 
               <div class="mt-6 flex justify-end space-x-3">
                 <button
                   type="button"
-                  class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 transition-colors"
+                  class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                   @click="closeModal"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors"
+                  class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                   @click="importJson"
                 >
                   Import Preset
@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref } from 'vue';
 import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
 import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 

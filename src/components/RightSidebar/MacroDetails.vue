@@ -3,7 +3,7 @@
     <div>
       <label class="block text-sm font-medium text-gray-700">Variable</label>
       <div
-        class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md shadow-sm"
+        class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 shadow-sm"
       >
         <span class="font-mono text-sm">{{ variableName }}</span>
       </div>
@@ -18,14 +18,18 @@
           <li
             v-for="(defId, index) in variableInfo.definedIn"
             :key="index"
+            class="cursor-pointer rounded-md border border-blue-200 bg-blue-50 p-2 transition-colors hover:bg-blue-100"
             @click="navigateTo(defId)"
-            class="p-2 bg-blue-50 rounded-md border border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors"
           >
-            <p class="text-sm font-medium text-blue-800">{{ getPromptName(defId) }}</p>
-            <p class="text-xs text-gray-500 font-mono">{{ defId }}</p>
+            <p class="text-sm font-medium text-blue-800">
+              {{ getPromptName(defId) }}
+            </p>
+            <p class="font-mono text-xs text-gray-500">
+              {{ defId }}
+            </p>
           </li>
         </ul>
-        <div v-else class="p-2 bg-red-50 rounded-md border border-red-200">
+        <div v-else class="rounded-md border border-red-200 bg-red-50 p-2">
           <p class="text-sm font-medium text-red-700">This variable is not defined anywhere.</p>
         </div>
       </div>
@@ -40,11 +44,15 @@
           <li
             v-for="(refId, index) in variableInfo.referencedIn"
             :key="index"
+            class="cursor-pointer rounded-md border border-green-200 bg-green-50 p-2 transition-colors hover:bg-green-100"
             @click="navigateTo(refId)"
-            class="p-2 bg-green-50 rounded-md border border-green-200 hover:bg-green-100 cursor-pointer transition-colors"
           >
-            <p class="text-sm font-medium text-green-800">{{ getPromptName(refId) }}</p>
-            <p class="text-xs text-gray-500 font-mono">{{ refId }}</p>
+            <p class="text-sm font-medium text-green-800">
+              {{ getPromptName(refId) }}
+            </p>
+            <p class="font-mono text-xs text-gray-500">
+              {{ refId }}
+            </p>
           </li>
         </ul>
         <p v-else class="mt-1 text-sm text-gray-500 italic">Not referenced by any other prompt.</p>

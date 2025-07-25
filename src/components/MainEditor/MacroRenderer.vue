@@ -1,7 +1,7 @@
 <template>
   <span
     :class="macroStyle"
-    class="font-mono rounded px-1 py-0.5 mx-0.5 cursor-pointer transition-all duration-150"
+    class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
     @click.stop="onClick"
   >
     {{ formattedMacro }}
@@ -9,7 +9,7 @@
 </template>
 
 <script setup>
-import { defineProps, computed } from 'vue';
+import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 
 const props = defineProps({

@@ -1,22 +1,22 @@
 <template>
-  <div class="h-full flex flex-col space-y-2">
+  <div class="flex h-full flex-col space-y-2">
     <TabGroup :selected-index="activeTabIndex" @change="changeTab">
-      <TabList class="flex space-x-1 rounded-xl bg-gray-200 p-1 flex-shrink-0">
-        <Tab v-for="tab in tabs" :key="tab.name" as="template" v-slot="{ selected }">
+      <TabList class="flex flex-shrink-0 space-x-1 rounded-xl bg-gray-200 p-1">
+        <Tab v-for="tab in tabs" :key="tab.name" v-slot="{ selected }" as="template">
           <button
             :class="[
-              'w-full rounded-lg py-2 text-sm font-medium leading-5',
-              'ring-white/60 ring-offset-2 ring-offset-blue-400 focus:outline-none focus:ring-2',
+              'w-full rounded-lg py-2 text-sm leading-5 font-medium',
+              'ring-white/60 ring-offset-2 ring-offset-blue-400 focus:ring-2 focus:outline-none',
               selected ? 'bg-white text-blue-700 shadow' : 'text-blue-700/60 hover:text-blue-700',
             ]"
           >
-            <component :is="tab.icon" class="h-5 w-5 inline-block -mt-0.5 mr-1.5" />
+            <component :is="tab.icon" class="-mt-0.5 mr-1.5 inline-block h-5 w-5" />
             {{ tab.name }}
           </button>
         </Tab>
       </TabList>
 
-      <TabPanels class="flex-grow rounded-xl bg-white shadow-sm overflow-y-auto">
+      <TabPanels class="flex-grow overflow-y-auto rounded-xl bg-white shadow-sm">
         <TabPanel :key="'details'" class="h-full p-4">
           <DetailsView />
         </TabPanel>

@@ -47,7 +47,7 @@ watch(
 
         // Flash animation
         element.classList.add('flash-highlight');
-        setTimeout(() => {
+        window.setTimeout(() => {
           element.classList.remove('flash-highlight');
           store.clearScrollToRequest();
         }, 1500); // Animation duration

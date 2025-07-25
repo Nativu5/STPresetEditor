@@ -1,32 +1,32 @@
 <template>
-  <div class="flex flex-col h-full space-y-4">
+  <div class="flex h-full flex-col space-y-4">
     <!-- Variable List for Navigation -->
-    <div class="flex-shrink-0 rounded-lg p-2 border border-gray-200">
-      <h4 class="font-semibold text-md mb-2 px-2 border-b border-gray-200 pb-1">Variable List</h4>
+    <div class="flex-shrink-0 rounded-lg border border-gray-200 p-2">
+      <h4 class="mb-2 border-b border-gray-200 px-2 pb-1 text-base font-semibold">Variable List</h4>
       <div class="max-h-48 overflow-y-auto">
         <ul class="space-y-1">
           <li v-for="variable in variables" :key="`nav-${variable}`">
             <button
+              class="group relative flex w-full items-center justify-between rounded-md p-2 text-left font-mono text-sm transition-colors hover:bg-gray-100"
               @click="goToVariableDetails(variable)"
-              class="w-full text-left p-2 rounded-md font-mono text-sm transition-colors hover:bg-gray-100 flex items-center justify-between group relative"
             >
               <div class="flex items-center">
-                <VariableIcon class="h-4 w-4 mr-2 text-gray-500" />
+                <VariableIcon class="mr-2 h-4 w-4 text-gray-500" />
                 <span>{{ variable }}</span>
                 <!-- Unused variable icon -->
                 <ExclamationCircleIcon
                   v-if="isDefinedButUnused(variable)"
                   v-tooltip="{ content: 'Defined but never referenced', placement: 'top' }"
-                  class="h-4 w-4 ml-2 text-yellow-500"
+                  class="ml-2 h-4 w-4 text-yellow-500"
                 />
                 <QuestionMarkCircleIcon
                   v-if="isUnresolved(variable)"
                   v-tooltip="{ content: 'Referenced but never defined', placement: 'top' }"
-                  class="h-4 w-4 ml-2 text-red-500"
+                  class="ml-2 h-4 w-4 text-red-500"
                 />
               </div>
               <ArrowTopRightOnSquareIcon
-                class="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                class="h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
               />
             </button>
           </li>
@@ -35,8 +35,8 @@
     </div>
 
     <!-- Rename Tool -->
-    <div class="flex-grow border border-gray-200 rounded-lg p-3">
-      <h4 class="font-semibold text-md mb-2">Rename Variable</h4>
+    <div class="flex-grow rounded-lg border border-gray-200 p-3">
+      <h4 class="mb-2 text-base font-semibold">Rename Variable</h4>
       <div class="space-y-4">
         <Combobox v-model="selectedVariableForRename" nullable>
           <div class="relative">
@@ -45,10 +45,10 @@
             </ComboboxLabel>
             <div class="relative mt-1">
               <ComboboxInput
-                class="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm"
-                @change="query = $event.target.value"
+                class="w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-3 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
                 :display-value="(variable) => variable"
                 placeholder="Select a variable..."
+                @change="query = $event.target.value"
               />
               <ComboboxButton
                 class="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none"
@@ -66,20 +66,20 @@
               >
                 <div
                   v-if="filteredVariables.length === 0 && query !== ''"
-                  class="relative cursor-default select-none py-2 px-4 text-gray-700"
+                  class="relative cursor-default px-4 py-2 text-gray-700 select-none"
                 >
                   Nothing found.
                 </div>
                 <ComboboxOption
                   v-for="variable in filteredVariables"
                   :key="`rename-${variable}`"
+                  v-slot="{ active, selected }"
                   :value="variable"
                   as="template"
-                  v-slot="{ active, selected }"
                 >
                   <li
                     :class="[
-                      'relative cursor-default select-none py-2 pl-10 pr-4',
+                      'relative cursor-default py-2 pr-4 pl-10 select-none',
                       active ? 'bg-blue-600 text-white' : 'text-gray-900',
                     ]"
                   >
@@ -105,19 +105,19 @@
         <div>
           <label for="new-var-name" class="block text-sm font-medium text-gray-700">New Name</label>
           <input
-            type="text"
             id="new-var-name"
             v-model="newName"
+            type="text"
             :disabled="!selectedVariableForRename"
             placeholder="Enter new name..."
-            class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition disabled:bg-gray-100 disabled:cursor-not-allowed"
+            class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm transition focus:border-blue-500 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 sm:text-sm"
           />
         </div>
 
         <button
-          @click="executeRename"
           :disabled="!isRenameValid"
-          class="w-full inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          class="inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300"
+          @click="executeRename"
         >
           Rename
         </button>

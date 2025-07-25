@@ -1,17 +1,17 @@
 <template>
   <div
-    @click="selectPrompt"
-    class="p-4 mx-1 my-2 rounded-lg shadow-md border relative transition-shadow duration-200"
+    class="relative mx-1 my-2 rounded-lg border p-4 shadow-md transition-shadow duration-200"
     :class="[
       isSelected ? 'border-blue-500 ring-2 ring-blue-500/50' : 'border-gray-200',
       !isEnabled ? 'bg-gray-100' : 'bg-white',
     ]"
+    @click="selectPrompt"
   >
     <!-- Header: Title and Actions -->
-    <div class="flex items-center justify-between mb-2">
+    <div class="mb-2 flex items-center justify-between">
       <div class="flex items-center">
-        <Bars3Icon class="h-5 w-5 text-gray-400 mr-3 cursor-grab active:cursor-grabbing" />
-        <h3 class="font-bold text-md" :class="{ 'text-gray-500': !isEnabled }">
+        <Bars3Icon class="mr-3 h-5 w-5 cursor-grab text-gray-400 active:cursor-grabbing" />
+        <h3 class="text-base font-bold" :class="{ 'text-gray-500': !isEnabled }">
           {{ prompt.name }}
         </h3>
       </div>
@@ -29,7 +29,7 @@
         <Menu as="div" class="relative inline-block text-left">
           <div>
             <MenuButton
-              class="inline-flex w-full justify-center rounded-md p-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75"
+              class="inline-flex w-full justify-center rounded-md p-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               <EllipsisVerticalIcon class="h-5 w-5" aria-hidden="true" />
             </MenuButton>
@@ -43,16 +43,16 @@
             leave-to-class="transform scale-95 opacity-0"
           >
             <MenuItems
-              class="absolute right-0 mt-2 w-40 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-md ring-1 ring-gray-200 focus:outline-none z-10"
+              class="absolute right-0 z-10 mt-2 w-40 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-md ring-1 ring-gray-200 focus:outline-none"
             >
               <div class="px-1 py-1">
                 <MenuItem v-slot="{ active }">
                   <button
-                    @click.stop="hidePrompt"
                     :class="[
                       active ? 'bg-yellow-500 text-white' : 'text-gray-900',
                       'group flex w-full items-center rounded-md px-2 py-2 text-sm',
                     ]"
+                    @click.stop="hidePrompt"
                   >
                     <EyeSlashIcon class="mr-2 h-5 w-5 text-yellow-400" aria-hidden="true" />
                     Hide
@@ -62,11 +62,11 @@
               <div class="px-1 py-1">
                 <MenuItem v-slot="{ active }">
                   <button
-                    @click.stop="removePrompt"
                     :class="[
                       active ? 'bg-red-500 text-white' : 'text-gray-900',
                       'group flex w-full items-center rounded-md px-2 py-2 text-sm',
                     ]"
+                    @click.stop="removePrompt"
                   >
                     <TrashIcon class="mr-2 h-5 w-5 text-red-400" aria-hidden="true" />
                     Delete
@@ -79,7 +79,7 @@
       </div>
     </div>
     <!-- Text -->
-    <div class="text-sm whitespace-pre-wrap px-8" :class="{ 'text-gray-600': !isEnabled }">
+    <div class="px-8 text-sm whitespace-pre-wrap" :class="{ 'text-gray-600': !isEnabled }">
       <template v-for="(segment, index) in parsedContent" :key="index">
         <span v-if="segment.type === 'text'">{{ segment.value }}</span>
         <MacroRenderer
@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { defineProps, computed } from 'vue';
+import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import MacroRenderer from './MacroRenderer.vue';
 import { Switch, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
@@ -114,7 +114,8 @@ const isEnabled = computed({
   get() {
     return props.prompt.enabled !== false;
   },
-  set(value) {
+  // eslint-disable-next-line no-unused-vars
+  set(_value) {
     store.togglePromptEnabled(props.prompt.id);
   },
 });
@@ -143,7 +144,7 @@ const hidePrompt = () => {
 };
 
 const removePrompt = () => {
-  if (confirm(`Are you sure you want to permanently delete "${props.prompt.name}"?`)) {
+  if (window.confirm(`Are you sure you want to permanently delete "${props.prompt.name}"?`)) {
     store.removePrompt(props.prompt.id);
   }
 };

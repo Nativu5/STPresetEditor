@@ -4,8 +4,8 @@ import { usePresetStore } from './stores/presetStore';
 import presetData from './assets/example.json';
 import PromptLibrary from './components/LeftSidebar/PromptLibrary.vue';
 import EditorView from './components/MainEditor/EditorView.vue';
-import RightSidebar from './components/RightSidebar/index.vue';
-import Toolbar from './components/Toolbar.vue';
+import RightSidebar from './components/RightSidebar/RightSidebar.vue';
+import AppToolbar from './components/AppToolbar.vue';
 import JsonImportModal from './components/JsonImportModal.vue';
 import JsonExportModal from './components/JsonExportModal.vue';
 import { Splitpanes, Pane } from 'splitpanes';
@@ -41,28 +41,29 @@ const handleImport = (jsonString) => {
 </script>
 
 <template>
-  <div id="app-container" class="flex flex-col h-screen bg-gray-100">
-    <header class="bg-white shadow-md p-2 z-10 flex-shrink-0">
-      <Toolbar @open-import="isImportModalOpen = true" @open-export="isExportModalOpen = true" />
+  <div id="app-container" class="flex h-screen flex-col bg-gray-100">
+    <header class="z-10 flex-shrink-0 bg-white p-2 shadow-md">
+      <AppToolbar @open-import="isImportModalOpen = true" @open-export="isExportModalOpen = true" />
     </header>
 
     <main class="flex-1 overflow-hidden">
+      <!-- eslint-disable-next-line tailwindcss/no-custom-classname -->
       <splitpanes class="default-theme h-full">
         <pane min-size="15" size="25">
-          <div class="p-4 h-full flex flex-col bg-gray-50">
+          <div class="flex h-full flex-col bg-gray-50 p-4">
             <PromptLibrary />
           </div>
         </pane>
         <pane min-size="30" size="50">
-          <div class="p-4 h-full flex flex-col">
-            <h2 class="text-lg font-semibold mb-4 flex-shrink-0">Editor</h2>
+          <div class="flex h-full flex-col p-4">
+            <h2 class="mb-4 flex-shrink-0 text-lg font-semibold">Editor</h2>
             <div class="overflow-y-auto">
               <EditorView />
             </div>
           </div>
         </pane>
         <pane min-size="15" size="25">
-          <div class="p-4 h-full flex flex-col bg-gray-50">
+          <div class="flex h-full flex-col bg-gray-50 p-4">
             <RightSidebar />
           </div>
         </pane>

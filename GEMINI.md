@@ -6,15 +6,19 @@
 
 开发一个纯前端的在线编辑工具，用于可视化地编辑和管理 `preset.json` 这个复杂的 Prompt 预设文件。核心是降低维护难度，特别是处理 `prompts` 和 `prompt_order` 部分。
 
-## 技术栈与开发要求
+## 技术栈
 
 - **框架:** Vue.js
 - **构建工具:** Vite
 - **UI 相关框架:** Tailwind CSS（v4）+ Headless UI + Heroicons + Splitpanes + vuedraggable + vtooltip
 - **状态管理:** Pinia
+
+## 开发规范
+
 - **依赖管理:** 使用 npm 进行本地安装（node 和 npm 已全局安装）。所有工具链和依赖项必须安装在当前项目目录，而非全局。
-- **代码格式化:** 使用 Prettier 进行代码格式化（`.prettierrc`），确保代码风格一致。
 - **开发服务器:** 禁止 Agent 直接运行 `npm run dev` 等会长期占用终端的命令。所有网页测试由用户本人完成。
+- **代码格式化:** 使用 ESLint 和 Prettier 进行代码格式化和风格检查。所有提交的代码必须符合项目的 ESLint 规则。
+- **代码风格:** 所有注释和文本必须使用英文 (English)。和用户的交互允许使用中文。
 
 ## 核心设计：状态驱动的 UI
 
@@ -77,7 +81,7 @@
 
 # `preset.json` 文件结构分析
 
-`preset.json` 文件是一个 SillyTavern 项目使用的、高度模块化和可组合的 Prompt 工程文件。项目内置了一个相对复杂的实例文件（`preset.example.json`）用于开发者参考。
+`preset.json` 文件是一个 SillyTavern 项目使用的、高度模块化和可组合的 Prompt 工程文件。项目内置了一个简单的实例文件（`src/assets/example.json`）用于开发者参考。
 
 ## 核心概念
 

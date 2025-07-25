@@ -1,33 +1,37 @@
 <template>
   <div
-    @click="handleClick"
-    class="p-2 mb-2 rounded-md shadow-sm border flex items-center justify-between cursor-pointer transition-colors duration-150 relative"
+    class="relative mb-2 flex cursor-pointer items-center justify-between rounded-md border p-2 shadow-sm transition-colors duration-150"
     :class="{
-      'bg-blue-50 border-blue-300': isSelectedInLibrary,
-      'bg-white border-gray-200 hover:bg-gray-50': !isSelectedInLibrary,
+      'border-blue-300 bg-blue-50': isSelectedInLibrary,
+      'border-gray-200 bg-white hover:bg-gray-50': !isSelectedInLibrary,
     }"
+    @click="handleClick"
   >
-    <div class="flex items-center flex-grow">
+    <div class="flex flex-grow items-center">
       <input
         v-if="store.isMultiSelectActive"
         type="checkbox"
         :checked="isSelectedInLibrary"
-        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3 flex-shrink-0"
+        class="mr-3 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         @click.stop
         @change="toggleSelection"
       />
       <div class="flex-grow">
-        <p class="font-semibold text-sm">{{ prompt.name }}</p>
-        <p class="text-xs text-gray-500 font-mono">{{ prompt.id }}</p>
+        <p class="text-sm font-semibold">
+          {{ prompt.name }}
+        </p>
+        <p class="font-mono text-xs text-gray-500">
+          {{ prompt.id }}
+        </p>
       </div>
     </div>
 
-    <div class="flex-shrink-0 ml-2">
+    <div class="ml-2 flex-shrink-0">
       <button
-        @click.stop="addOrNavigate"
         :title="isInOrder ? 'Prompt is already in the editor' : 'Add prompt to editor'"
-        class="p-1 rounded-full hover:bg-gray-200 transition-colors"
+        class="rounded-full p-1 transition-colors hover:bg-gray-200"
         :disabled="isInOrder"
+        @click.stop="addOrNavigate"
       >
         <CheckCircleIcon v-if="isInOrder" class="h-6 w-6 text-green-500" />
         <PlusCircleIcon v-else class="h-6 w-6 text-gray-400 hover:text-gray-600" />
@@ -37,7 +41,7 @@
 </template>
 
 <script setup>
-import { defineProps, computed } from 'vue';
+import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { CheckCircleIcon, PlusCircleIcon } from '@heroicons/vue/24/solid';
 
