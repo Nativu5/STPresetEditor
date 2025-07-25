@@ -8,7 +8,7 @@
 
 A lightweight, user-friendly web editor for managing SillyTavern `preset.json` files efficiently, powered by Vue.js and Tailwind CSS.
 
-## 🚀 Overview
+## 🖼 Overview
 
 The default SillyTavern preset editor offers basic functionality but can be slow and lacks advanced editing features (e.g., macro highlighting, variable management).
 

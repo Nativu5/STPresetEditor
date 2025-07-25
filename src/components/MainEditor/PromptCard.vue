@@ -80,13 +80,14 @@
     </div>
     <!-- Text -->
     <div class="px-8 text-sm whitespace-pre-wrap" :class="{ 'text-gray-600': !isEnabled }">
-      <template v-for="(segment, index) in parsedContent" :key="index">
-        <span v-if="segment.type === 'text'">{{ segment.value }}</span>
+      <template v-for="(part, index) in contentParts" :key="index">
         <MacroRenderer
-          v-else-if="segment.type === 'macro'"
-          :content="segment.value"
+          v-if="isMacro(part)"
+          :content="extractMacroContent(part)"
           :prompt-id="prompt.id"
+          :part-index="index"
         />
+        <span v-else>{{ part }}</span>
       </template>
     </div>
   </div>
@@ -114,26 +115,25 @@ const isEnabled = computed({
   get() {
     return props.prompt.enabled !== false;
   },
-  // eslint-disable-next-line no-unused-vars
-  set(_value) {
+  set() {
     store.togglePromptEnabled(props.prompt.id);
   },
 });
 
-const parsedContent = computed(() => {
-  const content = props.prompt.content || '';
-  const regex = /({{\s*.*?\s*}})/gs;
-  const parts = content.split(regex).filter((part) => part);
+const MACRO_SPLIT_REGEX = /({{\s*.*?\s*}})/gs;
 
-  return parts.map((part) => {
-    const match = part.match(/^{{\s*(.*?)\s*}}$/s);
-    if (match) {
-      return { type: 'macro', value: match[1] };
-    } else {
-      return { type: 'text', value: part };
-    }
-  });
+const contentParts = computed(() => {
+  const content = props.prompt.content || '';
+  return content.split(MACRO_SPLIT_REGEX).filter(Boolean);
 });
+
+const isMacro = (part) => {
+  return part.startsWith('{{') && part.endsWith('}}');
+};
+
+const extractMacroContent = (macro) => {
+  return macro.slice(2, -2).trim();
+};
 
 const selectPrompt = () => {
   store.selectPrompt(props.prompt.id);

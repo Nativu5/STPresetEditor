@@ -101,19 +101,25 @@
 - **解析 (`parseFromJson`)**: 在解析 JSON 时，代码会遍历 `prompt_order` 数组，使用 `find` 方法定位到 `character_id` 为 `100001` 的对象。然后，只提取该对象内部的 `order` 数组作为编辑器的数据源。同时，`order` 数组中的 `enabled` 状态会被同步到 `prompts` 库中对应的 Prompt 对象上，确保状态的统一。
 - **导出 (`finalJson` Getter)**: 在生成最终 JSON 时，代码会先深拷贝原始 JSON 结构。然后，同样定位到 `character_id: 100001` 的对象，并用当前编辑器中的 `promptOrder` 状态去**覆盖**其 `order` 字段。`prompt_order` 数组中的任何其他对象都保持原样，从而实现了安全、精确的“原地更新”。
 
-### 2. 宏变量关系图的构建 (`analyzeMacros`)
+### 2. 宏状态与值快照的统一分析 (`analyzeAllMacros`)
 
-这是宏系统的核心算法，它通过一个高效的两步过程来构建变量的定义-引用关系图。
+为了实现 `getvar` 的实时值预览，旧的 `analyzeMacros` 函数被一个全新的、功能更强大的 `analyzeAllMacros` 统一分析器所取代。该分析器是整个宏系统的核心，它不仅构建变量的定义-引用关系图，还为每个 `getvar` 宏精确计算并缓存其在执行流中的瞬时值。
 
-1.  **初次扫描与分类**:
-    - 使用正则表达式 `/{{\s*(.*?)\s*}}/gs` 遍历所有 Prompt 的 `content` 字符串，捕获所有宏。
-    - 在循环中，对每个宏的内容进行解析，判断其类型。如果是 `setvar`，则在一个临时的 `newVariables` 对象中记录下变量名和其定义的 `promptId` 列表。如果是 `getvar`，则将其变量名和所在的 `promptId` 存入一个临时的 `getVarRefs` 数组。
+该函数采用一个逻辑清晰的三阶段（3-Pass）设计，以确保分析的准确性和高性能：
 
-2.  **二次处理与关联**:
-    - 遍历 `getVarRefs` 数组。
-    - 对于每一个 `getvar` 引用，去 `newVariables` 对象中查找是否存在对应的定义。如果存在，就将当前的 `promptId` 添加到该变量的 `referencedIn` 数组中。如果不存在，就将这个引用记录到 `unresolvedVariables` 数组中，以便 UI 对其进行警告。
+1.  **第一阶段：纯粹解析 (Parsing Pass):**
+    - 严格按照 `promptOrder` 顺序，遍历所有启用的 Prompt，将每个宏（`setvar` 或 `getvar`）解析为一个结构化的对象，并添加到一个扁平化的 `allMacros` 数组中。此阶段只负责解析，速度极快。
 
-这个算法确保了在 O(N) 的时间复杂度内（N 为所有 Prompt 的总字符数）完成了所有宏的分析，性能高效，且逻辑清晰。最终产出的 `variables` 和 `unresolvedVariables` 对象为所有后续的交互功能（高亮、详情展示、变量管理）提供了坚实的数据基础。
+2.  **第二阶段：状态模拟与快照生成 (Simulation & Snapshot Pass):**
+    - 按顺序遍历 `allMacros` 数组，模拟宏的执行流程。
+    - 维护一个临时的 `currentVarState` 对象来追踪所有变量的当前状态。
+    - 当遇到 `setvar` 时，更新 `currentVarState`。
+    - 当遇到 `getvar` 时，从 `currentVarState` 中读取当前值，并为该宏生成“值快照”，存入 `macroStateSnapshots` 对象中。同时记录所有变量的定义和引用位置。
+
+3.  **第三阶段：最终分析与关联 (Analysis & Association Pass):**
+    - 基于第二阶段收集的定义和引用信息，生成最终的 `variables` 状态（包含完整的 `definedIn` 和 `referencedIn` 列表）和 `unresolvedVariables` 列表。
+
+这个设计将解析、执行和分析完全分离，确保了逻辑的清晰与准确。对于用户输入等高频操作，该函数的调用被 `debounce` (防抖) 处理，避免了不必要的重复计算，保证了 UI 的流畅性。
 
 ### 3. 变量重命名 (`renameVariable`)
 

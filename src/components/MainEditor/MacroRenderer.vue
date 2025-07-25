@@ -1,5 +1,38 @@
 <template>
+  <Popover v-if="type === 'getvar'" class="relative inline-block">
+    <span
+      :class="macroStyle"
+      class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
+      @click.stop="onClick"
+      @mouseenter="handleMouseEnter"
+      @mouseleave="handleMouseLeave"
+    >
+      {{ formattedMacro }}
+    </span>
+
+    <transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="translate-y-1 opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="translate-y-1 opacity-0"
+    >
+      <PopoverPanel
+        v-show="isPopoverVisible"
+        static
+        class="absolute bottom-full left-1/2 z-20 mb-2 w-max max-w-xs -translate-x-1/2 transform rounded-lg bg-gray-800 px-3 py-2 text-sm font-normal text-white shadow-lg"
+      >
+        <div class="break-all">
+          <span class="font-bold">Value:</span>
+          <pre class="inline font-mono whitespace-pre-wrap">{{ currentValueForPopover }}</pre>
+        </div>
+      </PopoverPanel>
+    </transition>
+  </Popover>
+
   <span
+    v-else
     :class="macroStyle"
     class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
     @click.stop="onClick"
@@ -9,8 +42,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
+import { Popover, PopoverPanel } from '@headlessui/vue';
 
 const props = defineProps({
   content: {
@@ -21,25 +55,38 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  partIndex: {
+    type: Number,
+    required: true,
+  },
 });
 
 const store = usePresetStore();
+const isPopoverVisible = ref(false);
+let hoverTimeout = null;
 
-// Create the full macro string in the script section to avoid template parsing issues.
+const handleMouseEnter = () => {
+  if (hoverTimeout) clearTimeout(hoverTimeout);
+  isPopoverVisible.value = true;
+};
+
+const handleMouseLeave = () => {
+  hoverTimeout = setTimeout(() => {
+    isPopoverVisible.value = false;
+  }, 100);
+};
+
 const formattedMacro = computed(() => `{{${props.content}}}`);
 
 const parsedMacro = computed(() => {
   const content = props.content;
   const typeIndex = content.indexOf('::');
 
-  // Handle non-variable macros or malformed ones
   if (typeIndex === -1) {
-    const trimmedContent = content.trim();
-    if (trimmedContent.startsWith('//')) return { type: '//', varName: null };
-    if (trimmedContent.startsWith('random')) return { type: 'random', varName: null };
-    if (trimmedContent.startsWith('roll')) return { type: 'roll', varName: null };
-    if (trimmedContent === 'user' || trimmedContent === 'char')
-      return { type: trimmedContent, varName: null };
+    if (content.startsWith('//')) return { type: '//', varName: null };
+    if (content.startsWith('random')) return { type: 'random', varName: null };
+    if (content.startsWith('roll')) return { type: 'roll', varName: null };
+    if (content === 'user' || content === 'char') return { type: content, varName: null };
     return { type: 'unknown', varName: null };
   }
 
@@ -60,20 +107,33 @@ const parsedMacro = computed(() => {
 const type = computed(() => parsedMacro.value.type);
 const varName = computed(() => parsedMacro.value.varName);
 
+const macroId = computed(() => `${props.promptId}-${props.partIndex}`);
+
+const currentValue = computed(() => {
+  if (type.value !== 'getvar') return undefined;
+  return store.macroStateSnapshots[macroId.value];
+});
+
+const currentValueForPopover = computed(() => {
+  const value = currentValue.value;
+  if (value === undefined) return '<undefined>';
+  if (value === '') return '<empty string>';
+  return value;
+});
+
 const isSelected = computed(() => {
   if (!store.selectedMacro || !varName.value) return false;
   return store.selectedMacro.variableName === varName.value;
 });
 
 const isUnresolved = computed(() => {
-  if (type.value !== 'getvar' || !varName.value) return false;
-  return store.unresolvedVariables.some(
-    (uv) => uv.varName === varName.value && uv.promptId === props.promptId,
-  );
+  if (type.value !== 'getvar') return false;
+  // A getvar is unresolved if its specific snapshot value is undefined.
+  return currentValue.value === undefined;
 });
 
 const macroStyle = computed(() => {
-  let styles = [];
+  const styles = [];
   if (isSelected.value) {
     styles.push('ring-2 ring-offset-1 ring-yellow-500');
   }
@@ -98,12 +158,11 @@ const macroStyle = computed(() => {
     case 'char':
       styles.push('bg-yellow-300 text-yellow-700');
       break;
+    case '//':
+      styles.push('text-gray-500 italic');
+      break;
     default:
-      if (props.content.startsWith('//')) {
-        styles.push('text-gray-500 italic');
-      } else {
-        styles.push('bg-gray-200 text-gray-800');
-      }
+      styles.push('bg-gray-200 text-gray-800');
   }
   return styles;
 });

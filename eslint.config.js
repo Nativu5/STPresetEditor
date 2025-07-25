@@ -5,7 +5,13 @@ import tailwind from 'eslint-plugin-tailwindcss';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
-export default [
+import { defineConfig } from 'eslint/config';
+import { includeIgnoreFile } from '@eslint/compat';
+import { fileURLToPath } from 'node:url';
+
+const gitignorePath = fileURLToPath(new URL('.gitignore', import.meta.url));
+
+export default defineConfig([
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
   ...tailwind.configs['flat/recommended'],
@@ -29,4 +35,5 @@ export default [
       // 'tailwindcss/no-custom-classname': 'off',
     },
   },
-];
+  includeIgnoreFile(gitignorePath, 'Imported .gitignore patterns'),
+]);

@@ -1,4 +1,13 @@
 import { defineStore } from 'pinia';
+import { debounce } from 'lodash-es';
+
+// --- Helper function to create a debounced action ---
+function debouncedAction(action, delay) {
+  const debounced = debounce(action, delay);
+  return function (...args) {
+    debounced.call(this, ...args);
+  };
+}
 
 export const usePresetStore = defineStore('preset', {
   state: () => ({
@@ -13,6 +22,7 @@ export const usePresetStore = defineStore('preset', {
     },
     variables: {},
     unresolvedVariables: [],
+    macroStateSnapshots: {}, // New: Stores the value of each getvar at its execution point
     isMultiSelectActive: false,
     selectedLibraryPrompts: new Set(),
     librarySearchTerm: '',
@@ -22,7 +32,6 @@ export const usePresetStore = defineStore('preset', {
   getters: {
     isModified: (state) => {
       if (!state.initialJson) return false;
-      // By parsing and re-stringifying the initial JSON, we ensure a consistent format for comparison.
       const normalizedInitialJson = JSON.stringify(JSON.parse(state.initialJson), null, 2);
       return normalizedInitialJson !== state.finalJson;
     },
@@ -68,6 +77,7 @@ export const usePresetStore = defineStore('preset', {
     },
   },
   actions: {
+    // --- Initialization and Core Logic ---
     setInitialJson(jsonString) {
       this.initialJson = jsonString;
       this.parseFromJson(jsonString);
@@ -100,102 +110,172 @@ export const usePresetStore = defineStore('preset', {
             .map((p) => p.identifier || p.name)
             .filter(Boolean);
         }
-        this.analyzeMacros();
+        this.analyzeAllMacros();
       } catch (error) {
         console.error('Failed to parse JSON string:', error);
         this.prompts = {};
         this.promptOrder = [];
       }
     },
-    analyzeMacros() {
-      const newVariables = {};
-      const macroRegex = /{{\s*(.*?)\s*}}/gs;
-
-      // First pass: collect all variable names and their locations
-      for (const promptId in this.prompts) {
-        const prompt = this.prompts[promptId];
-        const content = prompt.content || '';
-        let match;
-        while ((match = macroRegex.exec(content)) !== null) {
-          const matchContent = match[1];
-          const typeIndex = matchContent.indexOf('::');
-          if (typeIndex === -1) continue;
-
-          const type = matchContent.substring(0, typeIndex).trim();
-          const rest = matchContent.substring(typeIndex + 2);
-          let varName;
-
-          if (type === 'setvar') {
-            const nameIndex = rest.indexOf('::');
-            if (nameIndex === -1) continue;
-            varName = rest.substring(0, nameIndex).trim();
-          } else if (type === 'getvar') {
-            varName = rest.trim();
-          } else {
-            continue;
-          }
-
-          if (!varName) continue;
-
-          if (!newVariables[varName]) {
-            newVariables[varName] = { definedIn: [], referencedIn: [] };
-          }
-
-          if (type === 'setvar') {
-            newVariables[varName].definedIn.push(promptId);
-          } else if (type === 'getvar') {
-            newVariables[varName].referencedIn.push(promptId);
-          }
-        }
-      }
-
-      // Second pass: identify unresolved variables
-      this.unresolvedVariables = [];
-      for (const varName in newVariables) {
-        const variable = newVariables[varName];
-        if (variable.definedIn.length === 0 && variable.referencedIn.length > 0) {
-          variable.referencedIn.forEach((promptId) => {
-            this.unresolvedVariables.push({ varName, promptId });
-            console.warn(
-              `[analyzeMacros] getvar: '${varName}' in prompt '${promptId}' is unresolved!`,
-            );
-          });
-        }
-      }
-
-      this.variables = newVariables;
-      console.log('[analyzeMacros] Variables analysis complete.');
-      console.log('[analyzeMacros] All variables (defined and undefined):', newVariables);
-      console.log('[analyzeMacros] Unresolved variable references:', this.unresolvedVariables);
-    },
     resetState() {
       if (this.initialJson) this.parseFromJson(this.initialJson);
     },
+
+    // --- Unified Macro Analysis (The new core) ---
+    analyzeAllMacros() {
+      console.log('[analyzeAllMacros] Starting analysis with new 3-pass strategy...');
+
+      const allMacros = [];
+      const macroRegex = /({{\s*.*?\s*}})/gs;
+      const setvarRegex = /setvar::(.*?)::(.*)/s;
+      const getvarRegex = /getvar::(.*)/s; // FIX: Made greedy
+
+      // --- Pass 1: Parse all macros and create a flat, ordered list ---
+      this.promptOrder.forEach((promptId) => {
+        const prompt = this.prompts[promptId];
+        if (!prompt || !prompt.enabled) return;
+
+        const parts = (prompt.content || '').split(macroRegex).filter(Boolean);
+        parts.forEach((part, index) => {
+          if (!part.startsWith('{{') || !part.endsWith('}}')) return;
+
+          const macroContent = part.slice(2, -2).trim();
+          const macroData = {
+            id: `${promptId}-${index}`,
+            promptId: promptId,
+            type: 'unknown',
+            varName: null,
+          };
+
+          const setvarMatch = macroContent.match(setvarRegex);
+          const getvarMatch = macroContent.match(getvarRegex);
+
+          if (setvarMatch) {
+            macroData.type = 'setvar';
+            macroData.varName = setvarMatch[1].trim();
+            macroData.value = setvarMatch[2].trim();
+          } else if (getvarMatch) {
+            macroData.type = 'getvar';
+            macroData.varName = getvarMatch[1].trim();
+          }
+          console.log(`[Store Pass 1] Parsed macro:`, {
+            content: macroContent,
+            data: JSON.parse(JSON.stringify(macroData)),
+          });
+          allMacros.push(macroData);
+        });
+      });
+
+      // --- Pass 2: Process the flat list to build states ---
+      const newSnapshots = {};
+      let currentVarState = {};
+      const allVarNames = new Set();
+      const definitions = {}; // { varName: [promptId, ...] }
+      const references = {}; // { varName: [promptId, ...] }
+
+      allMacros.forEach((macro) => {
+        if (macro.varName) {
+          allVarNames.add(macro.varName);
+        }
+
+        if (macro.type === 'setvar') {
+          currentVarState[macro.varName] = macro.value;
+          if (!definitions[macro.varName]) definitions[macro.varName] = [];
+          definitions[macro.varName].push(macro.promptId);
+        } else if (macro.type === 'getvar') {
+          newSnapshots[macro.id] = currentVarState[macro.varName];
+          if (!references[macro.varName]) references[macro.varName] = [];
+          references[macro.varName].push(macro.promptId);
+        }
+      });
+
+      // --- Pass 3: Finalize variables and unresolved states ---
+      const newVariables = {};
+      const newUnresolved = [];
+
+      allVarNames.forEach((varName) => {
+        const defs = definitions[varName] || [];
+        const refs = references[varName] || [];
+        newVariables[varName] = {
+          definedIn: [...new Set(defs)],
+          referencedIn: [...new Set(refs)],
+        };
+
+        if (defs.length === 0 && refs.length > 0) {
+          refs.forEach((promptId) => {
+            newUnresolved.push({ varName, promptId });
+          });
+        }
+      });
+
+      this.variables = newVariables;
+      this.unresolvedVariables = newUnresolved;
+      this.macroStateSnapshots = newSnapshots;
+
+      console.log('[analyzeAllMacros] Analysis complete. Snapshots generated:', newSnapshots);
+    },
+    analyzeAllMacrosDebounced: debouncedAction(function () {
+      this.analyzeAllMacros();
+    }, 300),
+
+    // --- Actions that trigger re-analysis ---
     updatePromptOrder(newOrder) {
       this.promptOrder = newOrder.map((p) => p.id);
+      this.analyzeAllMacros(); // Order change is instant, no debounce
     },
     hidePrompt(promptId) {
       this.promptOrder = this.promptOrder.filter((id) => id !== promptId);
+      this.analyzeAllMacros();
     },
     removePrompt(promptId) {
       delete this.prompts[promptId];
-      this.hidePrompt(promptId);
+      this.hidePrompt(promptId); // This will trigger analysis
     },
     togglePromptEnabled(promptId) {
       const prompt = this.prompts[promptId];
-      if (prompt) prompt.enabled = !(prompt.enabled !== false);
-    },
-    selectPrompt(promptId) {
-      this.selectedPromptId = promptId;
-      this.selectedMacro = null;
-      this.activeRightSidebarTab = 'details';
-    },
-    selectMacro(variableName) {
-      if (variableName) {
-        this.selectedMacro = { variableName };
-        this.selectedPromptId = null;
-        this.activeRightSidebarTab = 'details';
+      if (prompt) {
+        prompt.enabled = !(prompt.enabled !== false);
+        this.analyzeAllMacros();
       }
+    },
+    updatePromptDetail({ promptId, field, value }) {
+      const prompt = this.prompts[promptId];
+      if (prompt && typeof field === 'string') {
+        prompt[field] = value;
+        if (field === 'content') {
+          this.analyzeAllMacrosDebounced();
+        }
+      }
+    },
+    renameVariable({ oldName, newName }) {
+      const trimmedNewName = newName.trim();
+      if (
+        !trimmedNewName ||
+        trimmedNewName.includes(' ') ||
+        (this.variables[trimmedNewName] && trimmedNewName !== oldName)
+      ) {
+        window.alert('Invalid or conflicting new variable name.');
+        return false;
+      }
+
+      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\\]]/g, '\\$&');
+      const oldNameEscaped = escapeRegExp(oldName);
+      const setvarRegex = new RegExp(`({{\\s*setvar\\s*::)${oldNameEscaped}(\\s*::.*?\\s*}})`, 'g');
+      const getvarRegex = new RegExp(`({{\\s*getvar\\s*::)${oldNameEscaped}(\\s*}})`, 'g');
+
+      for (const promptId in this.prompts) {
+        const prompt = this.prompts[promptId];
+        if (prompt.content) {
+          prompt.content = prompt.content.replace(setvarRegex, `$1${trimmedNewName}$2`);
+          prompt.content = prompt.content.replace(getvarRegex, `$1${trimmedNewName}$2`);
+        }
+      }
+
+      this.analyzeAllMacros();
+      if (this.selectedMacro && this.selectedMacro.variableName === oldName) {
+        this.selectMacro(trimmedNewName);
+      }
+      return true;
     },
     createNewPrompt() {
       const newId = window.crypto.randomUUID();
@@ -204,23 +284,13 @@ export const usePresetStore = defineStore('preset', {
         identifier: newId,
         name: 'New Untitled Prompt',
         content: '{{// This is a new prompt. Add your content here.}}',
-        enabled: false,
+        enabled: true, // Start enabled to be part of analysis
       };
       this.prompts[newId] = newPrompt;
       this.promptOrder.unshift(newId);
+      this.analyzeAllMacros();
       this.selectPrompt(newId);
       this.navigateToPrompt(newId);
-    },
-    toggleMultiSelect() {
-      this.isMultiSelectActive = !this.isMultiSelectActive;
-      this.selectedLibraryPrompts.clear();
-    },
-    toggleLibrarySelection(promptId) {
-      if (this.selectedLibraryPrompts.has(promptId)) {
-        this.selectedLibraryPrompts.delete(promptId);
-      } else {
-        this.selectedLibraryPrompts.add(promptId);
-      }
     },
     deleteSelectedPrompts() {
       if (this.selectedLibraryPrompts.size === 0) return;
@@ -235,6 +305,39 @@ export const usePresetStore = defineStore('preset', {
         });
         this.selectedLibraryPrompts.clear();
         this.isMultiSelectActive = false;
+        this.analyzeAllMacros();
+      }
+    },
+    addPromptToOrder(promptId) {
+      if (!this.promptOrder.includes(promptId)) {
+        this.promptOrder.unshift(promptId);
+        this.analyzeAllMacros();
+        this.navigateToPrompt(promptId);
+      }
+    },
+
+    // --- UI and Selection Actions (no re-analysis needed) ---
+    selectPrompt(promptId) {
+      this.selectedPromptId = promptId;
+      this.selectedMacro = null;
+      this.activeRightSidebarTab = 'details';
+    },
+    selectMacro(variableName) {
+      if (variableName) {
+        this.selectedMacro = { variableName };
+        this.selectedPromptId = null;
+        this.activeRightSidebarTab = 'details';
+      }
+    },
+    toggleMultiSelect() {
+      this.isMultiSelectActive = !this.isMultiSelectActive;
+      this.selectedLibraryPrompts.clear();
+    },
+    toggleLibrarySelection(promptId) {
+      if (this.selectedLibraryPrompts.has(promptId)) {
+        this.selectedLibraryPrompts.delete(promptId);
+      } else {
+        this.selectedLibraryPrompts.add(promptId);
       }
     },
     setLibrarySearch(term) {
@@ -247,55 +350,8 @@ export const usePresetStore = defineStore('preset', {
     clearScrollToRequest() {
       this.scrollToPromptId = null;
     },
-    addPromptToOrder(promptId) {
-      if (!this.promptOrder.includes(promptId)) {
-        this.promptOrder.unshift(promptId);
-        this.navigateToPrompt(promptId);
-      }
-    },
-    updatePromptDetail({ promptId, field, value }) {
-      const prompt = this.prompts[promptId];
-      if (prompt && typeof field === 'string') {
-        prompt[field] = value;
-        if (field === 'content') {
-          this.analyzeMacros();
-        }
-      }
-    },
     setActiveRightSidebarTab(tabName) {
       this.activeRightSidebarTab = tabName;
-    },
-    renameVariable({ oldName, newName }) {
-      const trimmedNewName = newName.trim();
-      if (
-        !trimmedNewName ||
-        trimmedNewName.includes(' ') ||
-        (this.variables[trimmedNewName] && trimmedNewName !== oldName)
-      ) {
-        window.alert('Invalid or conflicting new variable name.');
-        return false;
-      }
-
-      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const oldNameEscaped = escapeRegExp(oldName);
-
-      const setvarRegex = new RegExp(`({{\\s*setvar\\s*::)${oldNameEscaped}(\\s*::.*?\\s*}})`, 'g');
-      const getvarRegex = new RegExp(`({{\\s*getvar\\s*::)${oldNameEscaped}(\\s*}})`, 'g');
-
-      for (const promptId in this.prompts) {
-        const prompt = this.prompts[promptId];
-        if (prompt.content) {
-          prompt.content = prompt.content.replace(setvarRegex, `$1${trimmedNewName}$2`);
-          prompt.content = prompt.content.replace(getvarRegex, `$1${trimmedNewName}$2`);
-        }
-      }
-
-      this.analyzeMacros();
-      // After renaming, we might want to update the selection to the new name
-      if (this.selectedMacro && this.selectedMacro.variableName === oldName) {
-        this.selectMacro(trimmedNewName);
-      }
-      return true;
     },
   },
 });
