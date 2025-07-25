@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import MacroRenderer from './MacroRenderer.vue';
 import { Switch, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
@@ -108,12 +108,6 @@ const props = defineProps({
 });
 
 const store = usePresetStore();
-
-onMounted(() => {
-  console.log(
-    `[PromptCard] Mounted for prompt ${props.prompt.id}. It has ${props.prompt.macros?.length || 0} pre-parsed macros.`,
-  );
-});
 
 const isSelected = computed(() => store.selectedPromptId === props.prompt.id);
 

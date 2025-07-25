@@ -23,7 +23,7 @@
 
 @layer components {
   .v-popper__inner {
-    @apply bg-white text-gray-800 text-xs px-3 py-2 rounded shadow-md border border-gray-200;
+    @apply text-xs px-3 py-2 rounded shadow-md font-mono whitespace-pre-wrap;
   }
 
   .v-popper__arrow {

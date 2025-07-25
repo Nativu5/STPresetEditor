@@ -2,6 +2,7 @@
   <!-- Render the getvar value in preview mode -->
   <span
     v-if="macro.type === 'getvar' && displayMode === 'preview'"
+    v-tooltip="{ content: macro.full, placement: 'top' }"
     class="mx-0.5 cursor-pointer rounded bg-yellow-100 px-1 py-0.5 font-mono text-yellow-800 ring-yellow-500 transition-all duration-150 hover:ring-2"
     :class="{ '!bg-red-100 !text-red-700': isUnresolved }"
     @click.stop="onClick"
@@ -10,37 +11,15 @@
   </span>
 
   <!-- Render the raw macro for all other cases -->
-  <Popover v-else-if="macro.type === 'getvar'" class="relative inline-block">
-    <span
-      :class="macroStyle"
-      class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
-      @click.stop="onClick"
-      @mouseenter="handleMouseEnter"
-      @mouseleave="handleMouseLeave"
-    >
-      {{ macro.full }}
-    </span>
-
-    <transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="translate-y-1 opacity-0"
-      enter-to-class="translate-y-0 opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="translate-y-0 opacity-100"
-      leave-to-class="translate-y-1 opacity-0"
-    >
-      <PopoverPanel
-        v-show="isPopoverVisible"
-        static
-        class="absolute bottom-full left-1/2 z-20 mb-2 w-max max-w-xs -translate-x-1/2 transform rounded-lg bg-gray-800 px-3 py-2 text-sm font-normal text-white shadow-lg"
-      >
-        <div class="break-all">
-          <span class="font-bold">Value:</span>
-          <pre class="inline font-mono whitespace-pre-wrap">{{ currentValueForPopover }}</pre>
-        </div>
-      </PopoverPanel>
-    </transition>
-  </Popover>
+  <span
+    v-else-if="macro.type === 'getvar'"
+    v-tooltip="{ content: currentValueForPopover, placement: 'top' }"
+    :class="macroStyle"
+    class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
+    @click.stop="onClick"
+  >
+    {{ macro.full }}
+  </span>
 
   <span
     v-else
@@ -53,9 +32,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
-import { Popover, PopoverPanel } from '@headlessui/vue';
 
 const props = defineProps({
   /** @type {import('vue').PropType<import('../../stores/presetStore').MacroData>} */
@@ -70,19 +48,6 @@ const props = defineProps({
 });
 
 const store = usePresetStore();
-const isPopoverVisible = ref(false);
-let hoverTimeout = null;
-
-const handleMouseEnter = () => {
-  if (hoverTimeout) clearTimeout(hoverTimeout);
-  isPopoverVisible.value = true;
-};
-
-const handleMouseLeave = () => {
-  hoverTimeout = setTimeout(() => {
-    isPopoverVisible.value = false;
-  }, 100);
-};
 
 const currentValue = computed(() => {
   if (props.macro.type !== 'getvar') return undefined;

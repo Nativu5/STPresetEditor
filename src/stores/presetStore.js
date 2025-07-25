@@ -150,7 +150,7 @@ export const usePresetStore = defineStore('preset', {
 
     // --- Unified Macro Analysis ---
     analyzeAllMacros() {
-      console.log('[analyzeAllMacros] Starting analysis focused on promptOrder...');
+      console.log('[analyzeAllMacros] Starting analysis macros...');
 
       // --- Pre-analysis: Clear stale macro data from all prompts ---
       Object.values(this.prompts).forEach((p) => {
@@ -266,7 +266,8 @@ export const usePresetStore = defineStore('preset', {
       this.unresolvedVariables = Array.from(newUnresolved).map((varName) => ({ varName }));
       this.macroStateSnapshots = newSnapshots;
 
-      console.log('[analyzeAllMacros] Analysis focused on promptOrder complete.');
+      console.log('[analyzeAllMacros] Analysis complete.');
+      console.log('[analyzeAllMacros] Variables:', this.variables);
     },
 
     findPromptIdByMacroId(macroId) {
