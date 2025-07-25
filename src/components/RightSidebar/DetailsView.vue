@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4 bg-white rounded-lg shadow-inner h-full">
+  <div class="bg-white rounded-lg h-full">
     <div v-if="selectedMacro">
       <MacroDetails />
     </div>
