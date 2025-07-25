@@ -1,7 +1,7 @@
 <template>
   <div 
     @click="selectPrompt"
-    class="p-4 mb-4 rounded-lg shadow-md border relative transition-shadow duration-200"
+    class="p-4 mx-1 my-2 rounded-lg shadow-md border relative transition-shadow duration-200"
     :class="[
       isSelected ? 'border-blue-500 ring-2 ring-blue-500/50' : 'border-gray-200',
       !isEnabled ? 'bg-gray-100' : 'bg-white',

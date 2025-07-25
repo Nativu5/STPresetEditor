@@ -96,6 +96,7 @@ export const usePresetStore = defineStore('preset', {
         const newVariables = {};
         const getVarRefs = [];
         const macroRegex = /{{\s*(.*?)\s*}}/g;
+        console.log('[analyzeMacros] Start analyzing macros...');
         for (const promptId in this.prompts) {
             const prompt = this.prompts[promptId];
             const content = prompt.content || '';
@@ -107,8 +108,10 @@ export const usePresetStore = defineStore('preset', {
                     const varName = parts[1];
                     if (!newVariables[varName]) newVariables[varName] = { definedIn: [], referencedIn: [] };
                     newVariables[varName].definedIn.push(promptId);
+                    // console.log(`[analyzeMacros] setvar: '${varName}' defined in prompt '${promptId}'`);
                 } else if (type === 'getvar' && parts.length >= 2) {
                     getVarRefs.push({ varName: parts[1], promptId });
+                    // console.log(`[analyzeMacros] getvar: '${parts[1]}' referenced in prompt '${promptId}'`);
                 }
             }
         }
@@ -116,11 +119,15 @@ export const usePresetStore = defineStore('preset', {
         getVarRefs.forEach(({ varName, promptId }) => {
             if (newVariables[varName] && newVariables[varName].definedIn.length > 0) {
                 newVariables[varName].referencedIn.push(promptId);
+                console.log(`[analyzeMacros] getvar: '${varName}' resolved in prompt '${promptId}'`);
             } else {
                 this.unresolvedVariables.push({ varName, promptId });
+                console.warn(`[analyzeMacros] getvar: '${varName}' in prompt '${promptId}' is unresolved!`);
             }
         });
         this.variables = newVariables;
+        console.log('[analyzeMacros] Variables:', newVariables);
+        console.log('[analyzeMacros] Unresolved variables:', this.unresolvedVariables);
     },
     resetState() {
       if (this.initialJson) this.parseFromJson(this.initialJson);
@@ -216,7 +223,8 @@ export const usePresetStore = defineStore('preset', {
         this.activeRightSidebarTab = tabName;
     },
     renameVariable({ oldName, newName }) {
-        if (!newName || newName.includes(' ') || this.variables[newName]) {
+        const trimmedNewName = newName.trim();
+        if (!trimmedNewName || trimmedNewName.includes(' ') || (this.variables[trimmedNewName] && trimmedNewName !== oldName)) {
             alert('Invalid or conflicting new variable name.');
             return false;
         }
@@ -224,17 +232,22 @@ export const usePresetStore = defineStore('preset', {
         const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const oldNameEscaped = escapeRegExp(oldName);
 
+        const setvarRegex = new RegExp(`({{\\s*setvar\\s*::)${oldNameEscaped}(\\s*::.*?\\s*}})`, 'g');
+        const getvarRegex = new RegExp(`({{\\s*getvar\\s*::)${oldNameEscaped}(\\s*}})`, 'g');
+
         for (const promptId in this.prompts) {
             const prompt = this.prompts[promptId];
-            const setvarRegex = new RegExp(`{{\s*setvar\s*::)${oldNameEscaped}(\s*::.*?\s*}}`, 'g');
-            const getvarRegex = new RegExp(`{{\s*getvar\s*::)${oldNameEscaped}(\s*}}`, 'g');
-            
-            prompt.content = prompt.content.replace(setvarRegex, `$1${newName}$2`);
-            prompt.content = prompt.content.replace(getvarRegex, `$1${newName}$2`);
+            if (prompt.content) {
+                prompt.content = prompt.content.replace(setvarRegex, `$1${trimmedNewName}$2`);
+                prompt.content = prompt.content.replace(getvarRegex, `$1${trimmedNewName}$2`);
+            }
         }
 
         this.analyzeMacros();
-        this.selectMacro(newName);
+        // After renaming, we might want to update the selection to the new name
+        if (this.selectedMacro && this.selectedMacro.variableName === oldName) {
+            this.selectMacro(trimmedNewName);
+        }
         return true;
     }
   },

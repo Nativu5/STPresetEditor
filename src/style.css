@@ -20,3 +20,13 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b; /* bg-slate-500 */
 }
+
+@layer components {
+  .v-popper__inner {
+    @apply bg-white text-gray-800 text-xs px-3 py-2 rounded shadow-md border border-gray-200;
+  }
+
+  .v-popper__arrow {
+    @apply text-white; /* 控制箭头颜色，受 inner 背景影响 */
+  }
+}

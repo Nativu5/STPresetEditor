@@ -1,18 +1,29 @@
 <template>
   <div class="flex flex-col h-full space-y-4">
     <!-- Variable List for Navigation -->
-    <div class="flex-shrink-0 border rounded-lg p-2">
-      <h4 class="font-semibold text-md mb-2 px-2">Go to Variable Details</h4>
+    <div class="flex-shrink-0 rounded-lg p-2 border border-gray-200">
+    <h4 class="font-semibold text-md mb-2 px-2 border-b border-gray-200 pb-1">Variable List</h4>
       <div class="max-h-48 overflow-y-auto">
         <ul class="space-y-1">
           <li v-for="variable in variables" :key="`nav-${variable}`">
             <button 
               @click="goToVariableDetails(variable)" 
-              class="w-full text-left p-2 rounded-md font-mono text-sm transition-colors hover:bg-gray-100 flex items-center justify-between group"
+              class="w-full text-left p-2 rounded-md font-mono text-sm transition-colors hover:bg-gray-100 flex items-center justify-between group relative"
             >
               <div class="flex items-center">
                 <VariableIcon class="h-4 w-4 mr-2 text-gray-500" />
                 <span>{{ variable }}</span>
+                <!-- Unused variable icon -->
+                <ExclamationCircleIcon
+                  v-if="isDefinedButUnused(variable)"
+                  v-tooltip="{ content: 'Defined but never referenced', placement: 'top' }"
+                  class="h-4 w-4 ml-2 text-yellow-500"
+                />
+                <QuestionMarkCircleIcon
+                  v-if="isUnresolved(variable)"
+                  v-tooltip="{ content: 'Referenced but never defined', placement: 'top' }"
+                  class="h-4 w-4 ml-2 text-red-500"
+                />
               </div>
               <ArrowTopRightOnSquareIcon class="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
@@ -22,7 +33,7 @@
     </div>
 
     <!-- Rename Tool -->
-    <div class="flex-grow border rounded-lg p-3">
+    <div class="flex-grow border border-gray-200 rounded-lg p-3">
       <h4 class="font-semibold text-md mb-2">Rename Variable</h4>
       <div class="space-y-4">
         <Combobox v-model="selectedVariableForRename" nullable>
@@ -105,7 +116,17 @@ import {
   ComboboxOption,
   ComboboxOptions,
 } from '@headlessui/vue'
-import { CheckIcon, ChevronUpDownIcon, VariableIcon, ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/solid'
+import { CheckIcon, ChevronUpDownIcon, VariableIcon, ArrowTopRightOnSquareIcon, ExclamationCircleIcon, QuestionMarkCircleIcon } from '@heroicons/vue/24/solid'
+
+const isDefinedButUnused = (variable) => {
+  const info = store.variables[variable];
+  return info && info.definedIn && info.definedIn.length > 0 && (!info.referencedIn || info.referencedIn.length === 0);
+};
+
+const isUnresolved = (variable) => {
+  // store.unresolvedVariables: [{ varName, promptId }]
+  return store.unresolvedVariables.some(item => item.varName === variable);
+};
 
 const store = usePresetStore();
 const variables = computed(() => store.definedVariables);
@@ -148,6 +169,7 @@ const executeRename = () => {
 
 // For Navigation List
 const goToVariableDetails = (variable) => {
+  console.log(`Navigating to details for variable: ${variable}`);
   store.selectMacro(variable);
   store.setActiveRightSidebarTab('details');
 };
