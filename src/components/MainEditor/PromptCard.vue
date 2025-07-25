@@ -81,7 +81,11 @@
     <!-- Text -->
     <div class="px-8 text-sm whitespace-pre-wrap" :class="{ 'text-gray-600': !isEnabled }">
       <template v-for="(part, index) in contentParts" :key="index">
-        <MacroRenderer v-if="part.isMacro" :macro="part.macroData" />
+        <MacroRenderer
+          v-if="part.isMacro"
+          :macro="part.macroData"
+          :display-mode="store.macroDisplayMode"
+        />
         <span v-else>{{ part.content }}</span>
       </template>
     </div>
@@ -128,6 +132,8 @@ const isEnabled = computed({
 const contentParts = computed(() => {
   const content = props.prompt.content || '';
   const macros = props.prompt.macros || [];
+  const mode = store.macroDisplayMode;
+
   if (macros.length === 0) {
     return [{ isMacro: false, content: content }];
   }
@@ -144,8 +150,18 @@ const contentParts = computed(() => {
       parts.push({ isMacro: false, content: content.substring(lastIndex, macroStartIndex) });
     }
 
-    // Add the macro part
-    parts.push({ isMacro: true, macroData: macro });
+    // Add the macro part, applying mode logic
+    if (mode === 'preview') {
+      if (macro.type === 'setvar' || macro.type === 'comment') {
+        // Hide these macros in preview mode
+      } else {
+        // For getvar and others, pass the macro object to the renderer
+        parts.push({ isMacro: true, macroData: macro });
+      }
+    } else {
+      // In raw mode, always show the macro
+      parts.push({ isMacro: true, macroData: macro });
+    }
 
     lastIndex = macroStartIndex + macro.full.length;
   });
@@ -155,10 +171,6 @@ const contentParts = computed(() => {
     parts.push({ isMacro: false, content: content.substring(lastIndex) });
   }
 
-  console.log(
-    `[PromptCard] Content for ${props.prompt.id} split into ${parts.length} parts:`,
-    JSON.parse(JSON.stringify(parts)),
-  );
   return parts;
 });
 

@@ -127,31 +127,37 @@
 **多阶段分析法 (Multi-Pass Analysis)**
 
 1.  **预处理：清理阶段 (Cleanup Pass)**
-    -   在每次分析开始时，系统会先遍历所有 `prompts` 对象，将它们附带的旧 `macros` 数组清空。这确保了被移出 `prompt_order` 的 Prompt 不会携带任何过时的宏信息，保证了状态的纯净。
+    - 在每次分析开始时，系统会先遍历所有 `prompts` 对象，将它们附带的旧 `macros` 数组清空。这确保了被移出 `prompt_order` 的 Prompt 不会携带任何过时的宏信息，保证了状态的纯净。
 
 2.  **第一阶段：结构化解析 (Parsing Pass)**
-    -   遍历 `prompt_order` 数组，只对当前序列中的 Prompt 进行处理。
-    -   使用正则表达式 `/{{\s*(.*?)\s*}}/gs` 查找其 `content` 中的所有宏，并转换为标准化的 `macroData` 对象。
-    -   将生成的 `macroData` 对象数组存放在对应 Prompt 的 `macros` 属性上。
+    - 遍历 `prompt_order` 数组，只对当前序列中的 Prompt 进行处理。
+    - 使用正则表达式 `/{{\s*(.*?)\s*}}/gs` 查找其 `content` 中的所有宏，并转换为标准化的 `macroData` 对象。
+    - 将生成的 `macroData` 对象数组存放在对应 Prompt 的 `macros` 属性上。
 
 3.  **第二阶段：模拟与分析 (Simulation & Analysis Pass)**
-    -   首先，使用 `flatMap` 从 `prompt_order` 中高效地构建出一个包含所有相关宏的扁平化“执行流”数组 (`executionFlowMacros`)。
-    -   遍历此执行流，**同时执行**静态分析和运行时模拟：
-        -   **静态分析**：无条件记录所有 `setvar` 和 `getvar` 的定义与引用信息（包括其所在 Prompt 的 `enabled` 状态），用于构建完整的变量关系图。
-        -   **运行时模拟**：在同一个循环中，为 `getvar` 宏生成值快照。关键点在于，只有当一个 `setvar` 宏所在的 Prompt 的 `enabled` 状态为 `true` 时，它才被允许更新模拟中的变量状态。这确保了被禁用 Prompt 中的 `getvar` 依然能看到正确的上下文值。
+    - 首先，使用 `flatMap` 从 `prompt_order` 中高效地构建出一个包含所有相关宏的扁平化“执行流”数组 (`executionFlowMacros`)。
+    - 遍历此执行流，**同时执行**静态分析和运行时模拟：
+      - **静态分析**：无条件记录所有 `setvar` 和 `getvar` 的定义与引用信息（包括其所在 Prompt 的 `enabled` 状态），用于构建完整的变量关系图。
+      - **运行时模拟**：在同一个循环中，为 `getvar` 宏生成值快照。关键点在于，只有当一个 `setvar` 宏所在的 Prompt 的 `enabled` 状态为 `true` 时，它才被允许更新模拟中的变量状态。这确保了被禁用 Prompt 中的 `getvar` 依然能看到正确的上下文值。
 
 4.  **第三阶段：结果聚合 (Aggregation Pass)**
-    -   基于第二阶段收集的完整定义/引用信息，生成最终的 `variables` 和 `unresolvedVariables` 状态，供整个 UI 使用。
-    -   将模拟中生成的 `macroStateSnapshots` 提交到 store。
+    - 基于第二阶段收集的完整定义/引用信息，生成最终的 `variables` 和 `unresolvedVariables` 状态，供整个 UI 使用。
+    - 将模拟中生成的 `macroStateSnapshots` 提交到 store。
 
 这个设计将重量级的解析工作仅执行一次，后续的模拟和分析都在一个高效的循环中完成，确保了逻辑的清晰、准确和高性能。对于用户输入等高频操作，该函数的调用被 `debounce` (防抖) 处理，避免了不必要的重复计算，保证了 UI 的流畅性。
 
 ### 3. 统一的渲染与交互
 
-得益于 `analyzeAllMacros` 生成的结构化数据，下游组件的渲染和交互逻辑得以极大简化：
+得益于 `analyzeAllMacros` 生成的结构化数据，下游组件的渲染和交互逻辑得以极大简化。通过 props 逐层传递状态（如 `macroDisplayMode`），保证了组件的纯粹性和可测试性。
 
--   **`PromptCard.vue`**: 该组件不再需要自行解析宏。它会直接遍历对应 Prompt 上的 `macros` 数组，结合 `content` 字符串高效地将内容分割为文本和宏对象两部分，然后分发给不同的渲染器。
--   **`MacroRenderer.vue`**: 这是一个纯粹的展示组件。它接收一个完整的 `macroData` 对象作为 `prop`，并根据其 `type`、`varName` 等属性来决定应用何种高亮样式、是否显示悬浮提示等，完全无需进行任何内部解析。
+-   **宏渲染模式**: 编辑器支持“原始模式”和“预览模式”两种渲染方式，由 `presetStore` 中的 `macroDisplayMode` 状态驱动。
+    -   **原始模式 (Raw Mode)**: 默认模式，所有宏均以其原始文本（`{{...}}`）的形式高亮显示。
+    -   **预览模式 (Preview Mode)**: `getvar` 宏会被替换为其在当前执行顺序下的真实值，并以特殊样式高亮，以区别于普通文本；`setvar` 和注释宏则被完全隐藏，以提供一个更干净的阅读视图。所有宏在两种模式下均保持可点击，以触发“查找引用”功能。
+
+-   **`PromptCard.vue`**: 作为“控制器”组件，它根据当前的 `macroDisplayMode` 状态，智能地决定哪些宏需要被渲染。在预览模式下，它会直接从待渲染列表中过滤掉 `setvar` 和注释宏。
+
+-   **`MacroRenderer.vue`**: 作为一个纯粹的“展示”组件，它接收 `macroData` 对象和 `displayMode` 作为 props。它内部包含根据模式切换渲染逻辑：在预览模式下，它会渲染 `getvar` 的值；在原始模式下，则渲染其原始文本。
+
 -   **`MacroDetails.vue`**: 该组件用于展示变量的定义和引用列表。它消费 `variables` state 中包含 `enabled` 状态的数组，从而能通过简单的 `:class` 绑定，将来自未启用 Prompt 的引用以灰色样式进行区分，提升了用户体验。
 
 这种自顶向下的数据流确保了宏的解析与渲染逻辑的绝对一致，极大地提升了代码的可维护性。

@@ -45,6 +45,7 @@ export const usePresetStore = defineStore('preset', {
     librarySearchTerm: '',
     scrollToPromptId: null,
     activeRightSidebarTab: 'details', // 'details' or 'variables'
+    macroDisplayMode: 'raw', // 'raw' or 'preview'
   }),
   getters: {
     isModified: (state) => {
@@ -416,6 +417,9 @@ export const usePresetStore = defineStore('preset', {
     },
     setActiveRightSidebarTab(tabName) {
       this.activeRightSidebarTab = tabName;
+    },
+    toggleMacroDisplayMode() {
+      this.macroDisplayMode = this.macroDisplayMode === 'raw' ? 'preview' : 'raw';
     },
   },
 });

@@ -19,10 +19,13 @@
             v-for="(def, index) in variableInfo.definedIn"
             :key="index"
             class="cursor-pointer rounded-md border border-blue-200 bg-blue-50 p-2 transition-colors hover:bg-blue-100"
-            :class="{ '!bg-gray-100 !border-gray-200': !def.enabled }"
+            :class="{ '!border-gray-200 !bg-gray-100': !def.enabled }"
             @click="navigateTo(def.promptId)"
           >
-            <p class="text-sm font-medium text-blue-800" :class="{ '!text-gray-500': !def.enabled }">
+            <p
+              class="text-sm font-medium text-blue-800"
+              :class="{ '!text-gray-500': !def.enabled }"
+            >
               {{ getPromptName(def.promptId) }}
             </p>
             <p class="font-mono text-xs text-gray-500">
@@ -46,10 +49,13 @@
             v-for="(ref, index) in variableInfo.referencedIn"
             :key="index"
             class="cursor-pointer rounded-md border border-green-200 bg-green-50 p-2 transition-colors hover:bg-green-100"
-            :class="{ '!bg-gray-100 !border-gray-200': !ref.enabled }"
+            :class="{ '!border-gray-200 !bg-gray-100': !ref.enabled }"
             @click="navigateTo(ref.promptId)"
           >
-            <p class="text-sm font-medium text-green-800" :class="{ '!text-gray-500': !ref.enabled }">
+            <p
+              class="text-sm font-medium text-green-800"
+              :class="{ '!text-gray-500': !ref.enabled }"
+            >
               {{ getPromptName(ref.promptId) }}
             </p>
             <p class="font-mono text-xs text-gray-500">

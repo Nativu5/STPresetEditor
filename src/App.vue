@@ -55,11 +55,8 @@ const handleImport = (jsonString) => {
           </div>
         </pane>
         <pane min-size="30" size="50">
-          <div class="flex h-full flex-col p-4">
-            <h2 class="mb-4 flex-shrink-0 text-lg font-semibold">Editor</h2>
-            <div class="overflow-y-auto">
-              <EditorView />
-            </div>
+          <div class="h-full p-4">
+            <EditorView />
           </div>
         </pane>
         <pane min-size="15" size="25">

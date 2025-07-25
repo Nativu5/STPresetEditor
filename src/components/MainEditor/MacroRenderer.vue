@@ -1,5 +1,16 @@
 <template>
-  <Popover v-if="macro.type === 'getvar'" class="relative inline-block">
+  <!-- Render the getvar value in preview mode -->
+  <span
+    v-if="macro.type === 'getvar' && displayMode === 'preview'"
+    class="mx-0.5 cursor-pointer rounded bg-yellow-100 px-1 py-0.5 font-mono text-yellow-800 ring-yellow-500 transition-all duration-150 hover:ring-2"
+    :class="{ '!bg-red-100 !text-red-700': isUnresolved }"
+    @click.stop="onClick"
+  >
+    {{ currentValueForPopover }}
+  </span>
+
+  <!-- Render the raw macro for all other cases -->
+  <Popover v-else-if="macro.type === 'getvar'" class="relative inline-block">
     <span
       :class="macroStyle"
       class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
@@ -42,7 +53,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { Popover, PopoverPanel } from '@headlessui/vue';
 
@@ -52,15 +63,15 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  displayMode: {
+    type: String,
+    required: true,
+  },
 });
 
 const store = usePresetStore();
 const isPopoverVisible = ref(false);
 let hoverTimeout = null;
-
-onMounted(() => {
-  console.log('[MacroRenderer] Mounted with macro:', JSON.parse(JSON.stringify(props.macro)));
-});
 
 const handleMouseEnter = () => {
   if (hoverTimeout) clearTimeout(hoverTimeout);
@@ -122,7 +133,7 @@ const macroStyle = computed(() => {
     case 'char':
     case 'scenario':
     case 'lastChatMessage':
-      styles.push('bg-yellow-300 text-yellow-700');
+      styles.push('bg-yellow-100 text-yellow-700');
       break;
     case 'comment':
       styles.push('text-gray-500 italic');
