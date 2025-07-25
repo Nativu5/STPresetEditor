@@ -101,27 +101,58 @@
 - **解析 (`parseFromJson`)**: 在解析 JSON 时，代码会遍历 `prompt_order` 数组，使用 `find` 方法定位到 `character_id` 为 `100001` 的对象。然后，只提取该对象内部的 `order` 数组作为编辑器的数据源。同时，`order` 数组中的 `enabled` 状态会被同步到 `prompts` 库中对应的 Prompt 对象上，确保状态的统一。
 - **导出 (`finalJson` Getter)**: 在生成最终 JSON 时，代码会先深拷贝原始 JSON 结构。然后，同样定位到 `character_id: 100001` 的对象，并用当前编辑器中的 `promptOrder` 状态去**覆盖**其 `order` 字段。`prompt_order` 数组中的任何其他对象都保持原样，从而实现了安全、精确的“原地更新”。
 
-### 2. 宏状态与值快照的统一分析 (`analyzeAllMacros`)
+### 2. 统一宏分析与结构化数据 (`analyzeAllMacros`)
 
-为了实现 `getvar` 的实时值预览，旧的 `analyzeMacros` 函数被一个全新的、功能更强大的 `analyzeAllMacros` 统一分析器所取代。该分析器是整个宏系统的核心，它不仅构建变量的定义-引用关系图，还为每个 `getvar` 宏精确计算并缓存其在执行流中的瞬时值。
+宏系统是编辑器的核心，其关键在于 `analyzeAllMacros` 这个统一分析函数。为实现高性能和高可维护性，该函数采用“一次解析，处处使用”的原则，将宏的解析与后续的分析流程完全分离。
 
-该函数采用一个逻辑清晰的三阶段（3-Pass）设计，以确保分析的准确性和高性能：
+**核心数据结构：`macroData` 对象**
 
-1.  **第一阶段：纯粹解析 (Parsing Pass):**
-    - 严格按照 `promptOrder` 顺序，遍历所有启用的 Prompt，将每个宏（`setvar` 或 `getvar`）解析为一个结构化的对象，并添加到一个扁平化的 `allMacros` 数组中。此阶段只负责解析，速度极快。
+分析流程的第一步，是将所有 Prompt 内容中的宏文本（`{{...}}`）解析为一个标准化的 `macroData` 对象。这个对象是整个系统消费的最小单元，它被直接附加到 `presetStore` 中对应的 Prompt 对象上。
 
-2.  **第二阶段：状态模拟与快照生成 (Simulation & Snapshot Pass):**
-    - 按顺序遍历 `allMacros` 数组，模拟宏的执行流程。
-    - 维护一个临时的 `currentVarState` 对象来追踪所有变量的当前状态。
-    - 当遇到 `setvar` 时，更新 `currentVarState`。
-    - 当遇到 `getvar` 时，从 `currentVarState` 中读取当前值，并为该宏生成“值快照”，存入 `macroStateSnapshots` 对象中。同时记录所有变量的定义和引用位置。
+`macroData` 对象的结构如下：
 
-3.  **第三阶段：最终分析与关联 (Analysis & Association Pass):**
-    - 基于第二阶段收集的定义和引用信息，生成最终的 `variables` 状态（包含完整的 `definedIn` 和 `referencedIn` 列表）和 `unresolvedVariables` 列表。
+| 字段      | 类型            | 描述                                                         |
+| :-------- | :-------------- | :----------------------------------------------------------- | ---------------------------- |
+| `id`      | `String`        | 宏实例的唯一 ID，由 `promptId` 和其在内容中的起始位置构成。  |
+| `full`    | `String`        | 完整的宏文本，例如 `{{setvar::x::10}}`。                     |
+| `type`    | `String`        | 解析后的宏类型，如 `setvar`, `getvar`, `comment`, `random`。 |
+| `varName` | `String         | null`                                                        | 宏关联的变量名（如果适用）。 |
+| `value`   | `String         | null`                                                        | `setvar` 宏所设定的值。      |
+| `params`  | `Array<String>` | 其他类型宏的参数列表，例如 `random` 宏的选项。               |
 
-这个设计将解析、执行和分析完全分离，确保了逻辑的清晰与准确。对于用户输入等高频操作，该函数的调用被 `debounce` (防抖) 处理，避免了不必要的重复计算，保证了 UI 的流畅性。
+**三阶段分析法 (3-Pass Analysis)**
 
-### 3. 变量重命名 (`renameVariable`)
+在所有宏都被解析为 `macroData` 对象后，系统会采用一个逻辑清晰的三阶段设计，来完成后续的分析：
+
+1.  **第一阶段：结构化解析 (Parsing Pass):**
+    - 遍历所有 `prompts` 对象，使用正则表达式 `/{{\s*(.*?)\s*}}/gs` 查找其 `content` 中的所有宏。
+    - 将每个找到的宏转换为标准化的 `macroData` 对象。
+    - 将生成的 `macroData` 对象数组存放在对应 Prompt 的 `macros` 属性上。此阶段完成后，所有组件都将直接消费这些预解析的数据，无需再进行任何独立的解析。
+
+2.  **第二阶段：状态模拟与快照 (Simulation & Snapshot Pass):**
+    - 严格按照 `promptOrder` 顺序，从启用的 Prompt 中收集所有 `macroData` 对象，形成一个扁平化的“执行流”数组。
+    - 遍历此执行流，模拟宏的执行：
+      - 维护一个临时的 `currentVarState` 对象来追踪变量的当前值。
+      - 遇到 `setvar`，则更新 `currentVarState`。
+      - 遇到 `getvar`，则从 `currentVarState` 中读取当前值，并为该 `getvar` 宏的 `id` 生成一个“值快照”，存入 `macroStateSnapshots` 对象中，供 UI 悬浮提示使用。
+    - 同时，在此阶段记录所有变量的定义（`definitions`）和引用（`references`）位置（通过宏 ID）。
+
+3.  **第三阶段：最终关联与聚合 (Association & Aggregation Pass):**
+    - 基于第二阶段收集的定义和引用信息，生成最终的 `variables` 状态，其中包含每个变量完整的 `definedIn` 和 `referencedIn` 列表（指向 Prompt ID）。
+    - 同时，识别出所有“有引用但无定义”的变量，生成 `unresolvedVariables` 列表，用于在 UI 上告警。
+
+这个设计将重量级的解析工作仅执行一次，后续的模拟和分析都基于轻量化的结构化数据进行，确保了逻辑的清晰、准确和高性能。对于用户输入等高频操作，该函数的调用被 `debounce` (防抖) 处理，避免了不必要的重复计算，保证了 UI 的流畅性。
+
+### 3. 统一的渲染逻辑
+
+得益于 `analyzeAllMacros` 生成的结构化数据，下游组件的渲染逻辑得以极大简化：
+
+- **`PromptCard.vue`**: 该组件不再需要使用正则表达式来分割普通文本和宏。它会直接遍历对应 Prompt 上的 `macros` 数组，结合 `content` 字符串的 `indexOf` 和 `substring` 方法，高效地将内容分割为文本和宏对象两部分，然后分发给不同的渲染器。
+- **`MacroRenderer.vue`**: 这是一个纯粹的展示组件。它接收一个完整的 `macroData` 对象作为 `prop`，并根据其 `type`、`varName` 等属性来决定应用何种高亮样式、是否显示悬浮提示等，完全无需进行任何内部解析。
+
+这种自顶向下的数据流确保了宏的解析与渲染逻辑的绝对一致，极大地提升了代码的可维护性。
+
+### 4. 变量重命名 (`renameVariable`)
 
 这是一个关键的高级功能，其算法确保了重命名的安全性和完整性：
 

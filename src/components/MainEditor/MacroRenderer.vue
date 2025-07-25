@@ -1,5 +1,5 @@
 <template>
-  <Popover v-if="type === 'getvar'" class="relative inline-block">
+  <Popover v-if="macro.type === 'getvar'" class="relative inline-block">
     <span
       :class="macroStyle"
       class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
@@ -7,7 +7,7 @@
       @mouseenter="handleMouseEnter"
       @mouseleave="handleMouseLeave"
     >
-      {{ formattedMacro }}
+      {{ macro.full }}
     </span>
 
     <transition
@@ -37,26 +37,18 @@
     class="mx-0.5 cursor-pointer rounded px-1 py-0.5 font-mono transition-all duration-150"
     @click.stop="onClick"
   >
-    {{ formattedMacro }}
+    {{ macro.full }}
   </span>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { Popover, PopoverPanel } from '@headlessui/vue';
 
 const props = defineProps({
-  content: {
-    type: String,
-    required: true,
-  },
-  promptId: {
-    type: String,
-    required: true,
-  },
-  partIndex: {
-    type: Number,
+  macro: {
+    type: Object,
     required: true,
   },
 });
@@ -64,6 +56,10 @@ const props = defineProps({
 const store = usePresetStore();
 const isPopoverVisible = ref(false);
 let hoverTimeout = null;
+
+onMounted(() => {
+  console.log('[MacroRenderer] Mounted with macro:', JSON.parse(JSON.stringify(props.macro)));
+});
 
 const handleMouseEnter = () => {
   if (hoverTimeout) clearTimeout(hoverTimeout);
@@ -76,42 +72,9 @@ const handleMouseLeave = () => {
   }, 100);
 };
 
-const formattedMacro = computed(() => `{{${props.content}}}`);
-
-const parsedMacro = computed(() => {
-  const content = props.content;
-  const typeIndex = content.indexOf('::');
-
-  if (typeIndex === -1) {
-    if (content.startsWith('//')) return { type: '//', varName: null };
-    if (content.startsWith('random')) return { type: 'random', varName: null };
-    if (content.startsWith('roll')) return { type: 'roll', varName: null };
-    if (content === 'user' || content === 'char') return { type: content, varName: null };
-    return { type: 'unknown', varName: null };
-  }
-
-  const type = content.substring(0, typeIndex).trim();
-  const rest = content.substring(typeIndex + 2);
-  let varName = null;
-
-  if (type === 'setvar') {
-    const nameIndex = rest.indexOf('::');
-    varName = nameIndex !== -1 ? rest.substring(0, nameIndex).trim() : null;
-  } else if (type === 'getvar') {
-    varName = rest.trim();
-  }
-
-  return { type, varName };
-});
-
-const type = computed(() => parsedMacro.value.type);
-const varName = computed(() => parsedMacro.value.varName);
-
-const macroId = computed(() => `${props.promptId}-${props.partIndex}`);
-
 const currentValue = computed(() => {
-  if (type.value !== 'getvar') return undefined;
-  return store.macroStateSnapshots[macroId.value];
+  if (props.macro.type !== 'getvar') return undefined;
+  return store.macroStateSnapshots[props.macro.id];
 });
 
 const currentValueForPopover = computed(() => {
@@ -122,12 +85,12 @@ const currentValueForPopover = computed(() => {
 });
 
 const isSelected = computed(() => {
-  if (!store.selectedMacro || !varName.value) return false;
-  return store.selectedMacro.variableName === varName.value;
+  if (!store.selectedMacro || !props.macro.varName) return false;
+  return store.selectedMacro.variableName === props.macro.varName;
 });
 
 const isUnresolved = computed(() => {
-  if (type.value !== 'getvar') return false;
+  if (props.macro.type !== 'getvar') return false;
   // A getvar is unresolved if its specific snapshot value is undefined.
   return currentValue.value === undefined;
 });
@@ -143,7 +106,7 @@ const macroStyle = computed(() => {
     return styles;
   }
 
-  switch (type.value) {
+  switch (props.macro.type) {
     case 'setvar':
       styles.push('bg-blue-100 text-blue-700 hover:bg-blue-200');
       break;
@@ -156,9 +119,11 @@ const macroStyle = computed(() => {
       break;
     case 'user':
     case 'char':
+    case 'scenario':
+    case 'lastChatMessage':
       styles.push('bg-yellow-300 text-yellow-700');
       break;
-    case '//':
+    case 'comment':
       styles.push('text-gray-500 italic');
       break;
     default:
@@ -168,8 +133,8 @@ const macroStyle = computed(() => {
 });
 
 const onClick = () => {
-  if (varName.value) {
-    store.selectMacro(varName.value);
+  if (props.macro.varName) {
+    store.selectMacro(props.macro.varName);
   }
 };
 </script>

@@ -81,20 +81,15 @@
     <!-- Text -->
     <div class="px-8 text-sm whitespace-pre-wrap" :class="{ 'text-gray-600': !isEnabled }">
       <template v-for="(part, index) in contentParts" :key="index">
-        <MacroRenderer
-          v-if="isMacro(part)"
-          :content="extractMacroContent(part)"
-          :prompt-id="prompt.id"
-          :part-index="index"
-        />
-        <span v-else>{{ part }}</span>
+        <MacroRenderer v-if="part.isMacro" :macro="part.macroData" />
+        <span v-else>{{ part.content }}</span>
       </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import MacroRenderer from './MacroRenderer.vue';
 import { Switch, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
@@ -109,6 +104,12 @@ const props = defineProps({
 
 const store = usePresetStore();
 
+onMounted(() => {
+  console.log(
+    `[PromptCard] Mounted for prompt ${props.prompt.id}. It has ${props.prompt.macros?.length || 0} pre-parsed macros.`,
+  );
+});
+
 const isSelected = computed(() => store.selectedPromptId === props.prompt.id);
 
 const isEnabled = computed({
@@ -120,20 +121,42 @@ const isEnabled = computed({
   },
 });
 
-const MACRO_SPLIT_REGEX = /({{\s*.*?\s*}})/gs;
-
 const contentParts = computed(() => {
   const content = props.prompt.content || '';
-  return content.split(MACRO_SPLIT_REGEX).filter(Boolean);
+  const macros = props.prompt.macros || [];
+  if (macros.length === 0) {
+    return [{ isMacro: false, content: content }];
+  }
+
+  const parts = [];
+  let lastIndex = 0;
+
+  macros.forEach((macro) => {
+    const macroStartIndex = content.indexOf(macro.full, lastIndex);
+    if (macroStartIndex === -1) return; // Should not happen
+
+    // Add text part before the macro
+    if (macroStartIndex > lastIndex) {
+      parts.push({ isMacro: false, content: content.substring(lastIndex, macroStartIndex) });
+    }
+
+    // Add the macro part
+    parts.push({ isMacro: true, macroData: macro });
+
+    lastIndex = macroStartIndex + macro.full.length;
+  });
+
+  // Add remaining text part after the last macro
+  if (lastIndex < content.length) {
+    parts.push({ isMacro: false, content: content.substring(lastIndex) });
+  }
+
+  console.log(
+    `[PromptCard] Content for ${props.prompt.id} split into ${parts.length} parts:`,
+    JSON.parse(JSON.stringify(parts)),
+  );
+  return parts;
 });
-
-const isMacro = (part) => {
-  return part.startsWith('{{') && part.endsWith('}}');
-};
-
-const extractMacroContent = (macro) => {
-  return macro.slice(2, -2).trim();
-};
 
 const selectPrompt = () => {
   store.selectPrompt(props.prompt.id);
