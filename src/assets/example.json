@@ -189,7 +189,7 @@
       "name": "Conclusion",
       "system_prompt": true,
       "role": "system",
-      "content": "编辑器不会自动保存！\n\n在编辑之后，记得点击页面右上角的 Export 按钮自行保存修改后的 JSON 到本地。\n\n出现任何编辑错误，可以随时点击 Reset 返回导入时的状态。\n\n恭喜您完成了教程！Happy Editing！",
+      "content": "编辑器会将变更自动保存到浏览器中。\n\n你可以点击 Import/Export 按钮，导入或导出 Preset 文件。\n\n恭喜您完成了教程！Happy Editing！",
       "identifier": "123e4567-e89b-12d3-a456-426614174003",
       "id": "123e4567-e89b-12d3-a456-426614174003",
       "enabled": true
