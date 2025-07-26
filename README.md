@@ -1,4 +1,4 @@
-# ST Preset Editor
+# SillyTavern Preset Editor
 
 <div>
     <img src="https://img.shields.io/badge/Vue-3.x-brightgreen.svg" alt="Vue 3">
@@ -17,6 +17,24 @@ A lightweight, user-friendly web editor for managing SillyTavern `preset.json` f
 The default SillyTavern preset editor offers basic functionality but can be slow and lacks advanced editing features (e.g., macro highlighting, variable management).
 
 This project enhances your editing experience with an intuitive, high-performance and powerful UI/UX.
+
+
+<table>
+  <tr>
+    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
+      <img src="https://github.com/user-attachments/assets/24a8cbf7-932a-4dba-9852-64752fbc406c" alt="Main Editor" height="200" />
+      <br>Prompt Manage & Edit
+    </td>
+    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
+      <img src="https://github.com/user-attachments/assets/86f3ca7b-0a86-4dc7-9ee3-0045fc4544d8" alt="Macro Analysis" height="200" />
+      <br>Macro Analysis & Preview
+    </td>
+    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
+      <img src="https://github.com/user-attachments/assets/4a2c883c-710e-40aa-9cce-f3be7770e5ad" alt="Variable Manager" height="200" />
+      <br>Variable Tools
+    </td>
+  </tr>
+</table>
 
 ## 🎯 Key Features
 
@@ -63,4 +81,4 @@ Contributions are welcome! Please open an issue or submit a pull request if you 
 
 ---
 
-Developed with 💚 using Vue.js and Tailwind CSS.
+Developed by 🤖 using Vue.js and Tailwind CSS.
