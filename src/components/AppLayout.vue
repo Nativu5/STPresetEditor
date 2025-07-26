@@ -1,4 +1,5 @@
 <script setup>
+import { watchEffect } from 'vue';
 import { useBreakpoints } from '@vueuse/core';
 import { usePresetStore } from '../stores/presetStore';
 import {
@@ -18,6 +19,11 @@ const breakpoints = useBreakpoints({
 const isDesktop = breakpoints.greaterOrEqual('desktop');
 
 const store = usePresetStore();
+
+// Watch for changes in the breakpoint and update the store
+watchEffect(() => {
+  store.setIsMobile(!isDesktop.value);
+});
 </script>
 
 <template>

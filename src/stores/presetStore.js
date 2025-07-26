@@ -53,6 +53,9 @@ export const usePresetStore = defineStore('preset', {
     // Modal visibility state
     isImportModalOpen: false,
     isExportModalOpen: false,
+
+    // Responsive state
+    isMobile: false,
   }),
   getters: {
     getPromptById: (state) => (id) => {
@@ -401,12 +404,18 @@ export const usePresetStore = defineStore('preset', {
       this.selectedPromptId = promptId;
       this.selectedMacro = null;
       this.activeRightSidebarTab = 'details';
+      if (this.isMobile) {
+        this.toggleRightSidebar(true);
+      }
     },
     selectMacro(variableName) {
       if (variableName) {
         this.selectedMacro = { variableName };
         this.selectedPromptId = null;
         this.activeRightSidebarTab = 'details';
+        if (this.isMobile) {
+          this.toggleRightSidebar(true);
+        }
       }
     },
     toggleMultiSelect() {
@@ -457,6 +466,11 @@ export const usePresetStore = defineStore('preset', {
     },
     closeExportModal() {
       this.isExportModalOpen = false;
+    },
+
+    // Responsive state management
+    setIsMobile(isMobile) {
+      this.isMobile = isMobile;
     },
   },
   persist: {
