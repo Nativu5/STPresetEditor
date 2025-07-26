@@ -28,7 +28,6 @@ function debouncedAction(action, delay) {
 
 export const usePresetStore = defineStore('preset', {
   state: () => ({
-    initialJson: '',
     rawJson: '',
     prompts: {},
     promptOrder: [],
@@ -48,11 +47,6 @@ export const usePresetStore = defineStore('preset', {
     macroDisplayMode: 'raw', // 'raw' or 'preview'
   }),
   getters: {
-    isModified: (state) => {
-      if (!state.initialJson) return false;
-      const normalizedInitialJson = JSON.stringify(JSON.parse(state.initialJson), null, 2);
-      return normalizedInitialJson !== state.finalJson;
-    },
     getPromptById: (state) => (id) => {
       return state.prompts[id];
     },
@@ -105,8 +99,16 @@ export const usePresetStore = defineStore('preset', {
   },
   actions: {
     // --- Initialization and Core Logic ---
-    setInitialJson(jsonString) {
-      this.initialJson = jsonString;
+    initializeDefaultData(jsonString) {
+      // This is called only when no persisted data exists
+      console.log('[Persistence] No persisted data found, loading default example.json');
+      this.parseFromJson(jsonString);
+    },
+
+    importNewJson(jsonString) {
+      // This is called when user imports new JSON
+      // It will automatically be persisted by the plugin
+      console.log('[Persistence] User imported new JSON, will be auto-saved');
       this.parseFromJson(jsonString);
     },
     parseFromJson(jsonString) {
@@ -144,8 +146,12 @@ export const usePresetStore = defineStore('preset', {
         this.promptOrder = [];
       }
     },
-    resetState() {
-      if (this.initialJson) this.parseFromJson(this.initialJson);
+
+    resetToFactoryDefault() {
+      // Clear the persisted state and reload the page
+      console.log('[Persistence] Clearing localStorage and resetting to factory default');
+      localStorage.removeItem('preset');
+      window.location.reload();
     },
 
     // --- Unified Macro Analysis ---
@@ -421,6 +427,25 @@ export const usePresetStore = defineStore('preset', {
     },
     toggleMacroDisplayMode() {
       this.macroDisplayMode = this.macroDisplayMode === 'raw' ? 'preview' : 'raw';
+    },
+  },
+  persist: {
+    // Only persist the essential user data, not derived/UI states
+    pick: ['rawJson', 'prompts', 'promptOrder', 'macroDisplayMode'],
+    beforeHydrate: () => {
+      console.log('[Persistence] About to hydrate store from localStorage');
+    },
+    afterHydrate: (ctx) => {
+      const hasPersistedData = Boolean(ctx.store.rawJson);
+      console.log(`[Persistence] Store hydrated. Has persisted data: ${hasPersistedData}`);
+      if (hasPersistedData) {
+        console.log(
+          `[Persistence] Loaded ${Object.keys(ctx.store.prompts).length} prompts, ${ctx.store.promptOrder.length} in order`,
+        );
+        // Re-analyze macros after hydration since derived states are not persisted
+        console.log('[Persistence] Re-analyzing macros after hydration...');
+        ctx.store.analyzeAllMacros();
+      }
     },
   },
 });

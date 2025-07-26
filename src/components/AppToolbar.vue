@@ -17,11 +17,11 @@
         Export
       </button>
       <button
-        class="inline-flex items-center rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-200 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:outline-none"
-        @click="resetState"
+        class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none"
+        @click="resetToDefault"
       >
         <ArrowPathIcon class="mr-2 -ml-1 h-5 w-5" />
-        Reset
+        Reset to Default
       </button>
     </div>
   </div>
@@ -35,9 +35,13 @@ defineEmits(['open-import', 'open-export']);
 
 const store = usePresetStore();
 
-const resetState = () => {
-  if (window.confirm('Are you sure you want to reset all changes to the original state?')) {
-    store.resetState();
+const resetToDefault = () => {
+  if (
+    window.confirm(
+      'Are you sure you want to reset all data and return to the factory default? This will permanently delete all your changes and cannot be undone.',
+    )
+  ) {
+    store.resetToFactoryDefault();
   }
 };
 </script>
