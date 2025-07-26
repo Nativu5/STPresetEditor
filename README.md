@@ -16,8 +16,9 @@ This project enhances your editing experience with an intuitive, high-performanc
 
 ## 🎯 Key Features
 
-- ⚡ **Real-time Editing**: Instantly modify prompts with batch selection and drag-and-drop support.
+- ⚡ **Real-time Editing & Saving**: Instantly edit prompts with batch selection and drag-and-drop. Changes are saved locally for secure, persistent editing.
 - 🧩 **Syntax Highlighting**: Automatically highlight special macros within prompts, enabling quick reference.
+- 🔍 **Macro Analysis & Preview**: Instantly analyze macros and switch between raw and preview modes for efficient editing.
 - 📊 **Variable Management**: Efficiently rename and track variable usage across all prompts.
 
 ## 🚀 Getting Started
