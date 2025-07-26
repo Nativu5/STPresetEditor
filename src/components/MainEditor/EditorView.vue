@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-full flex-col">
-    <div class="mb-4 flex flex-shrink-0 items-center justify-between">
+    <div class="mb-2 flex flex-shrink-0 items-center justify-between">
       <h2 class="text-lg font-semibold">Editor</h2>
       <SwitchGroup as="div" class="mx-2 flex items-center">
         <SwitchLabel as="span" class="mr-2 text-sm font-medium text-gray-900">

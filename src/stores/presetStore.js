@@ -45,6 +45,14 @@ export const usePresetStore = defineStore('preset', {
     scrollToPromptId: null,
     activeRightSidebarTab: 'details', // 'details' or 'variables'
     macroDisplayMode: 'raw', // 'raw' or 'preview'
+
+    // UI State for mobile layout
+    isLeftSidebarOpen: false,
+    isRightSidebarOpen: false,
+
+    // Modal visibility state
+    isImportModalOpen: false,
+    isExportModalOpen: false,
   }),
   getters: {
     getPromptById: (state) => (id) => {
@@ -427,6 +435,28 @@ export const usePresetStore = defineStore('preset', {
     },
     toggleMacroDisplayMode() {
       this.macroDisplayMode = this.macroDisplayMode === 'raw' ? 'preview' : 'raw';
+    },
+
+    // Mobile Sidebar Toggles
+    toggleLeftSidebar(isOpen) {
+      this.isLeftSidebarOpen = typeof isOpen === 'boolean' ? isOpen : !this.isLeftSidebarOpen;
+    },
+    toggleRightSidebar(isOpen) {
+      this.isRightSidebarOpen = typeof isOpen === 'boolean' ? isOpen : !this.isRightSidebarOpen;
+    },
+
+    // Modal toggles
+    openImportModal() {
+      this.isImportModalOpen = true;
+    },
+    closeImportModal() {
+      this.isImportModalOpen = false;
+    },
+    openExportModal() {
+      this.isExportModalOpen = true;
+    },
+    closeExportModal() {
+      this.isExportModalOpen = false;
     },
   },
   persist: {

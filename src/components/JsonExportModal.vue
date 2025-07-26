@@ -1,6 +1,31 @@
+<script setup>
+import { computed, ref } from 'vue';
+import { usePresetStore } from '../stores/presetStore';
+import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
+import { ArrowUpTrayIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/vue/24/outline';
+
+const store = usePresetStore();
+
+const finalJson = computed(() => store.finalJson);
+const copyButtonText = ref('Copy to Clipboard');
+
+async function copyToClipboard() {
+  try {
+    await navigator.clipboard.writeText(finalJson.value);
+    copyButtonText.value = 'Copied!';
+    window.setTimeout(() => {
+      copyButtonText.value = 'Copy to Clipboard';
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy: ', err);
+    copyButtonText.value = 'Failed to copy';
+  }
+}
+</script>
+
 <template>
-  <TransitionRoot appear :show="isOpen" as="template">
-    <Dialog as="div" class="relative z-50" @close="closeModal">
+  <TransitionRoot appear :show="store.isExportModalOpen" as="template">
+    <Dialog as="div" class="relative z-50" @close="store.closeExportModal">
       <TransitionChild
         as="template"
         enter="duration-300 ease-out"
@@ -52,7 +77,7 @@
                 <button
                   type="button"
                   class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
-                  @click="closeModal"
+                  @click="store.closeExportModal"
                 >
                   Close
                 </button>
@@ -76,37 +101,3 @@
     </Dialog>
   </TransitionRoot>
 </template>
-
-<script setup>
-import { computed, ref } from 'vue';
-import { usePresetStore } from '../stores/presetStore';
-import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
-import { ArrowUpTrayIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/vue/24/outline';
-
-defineProps({
-  isOpen: Boolean,
-});
-
-const emit = defineEmits(['close']);
-const store = usePresetStore();
-
-const finalJson = computed(() => store.finalJson);
-const copyButtonText = ref('Copy to Clipboard');
-
-function closeModal() {
-  emit('close');
-}
-
-async function copyToClipboard() {
-  try {
-    await navigator.clipboard.writeText(finalJson.value);
-    copyButtonText.value = 'Copied!';
-    window.setTimeout(() => {
-      copyButtonText.value = 'Copy to Clipboard';
-    }, 2000);
-  } catch (err) {
-    console.error('Failed to copy: ', err);
-    copyButtonText.value = 'Failed to copy';
-  }
-}
-</script>

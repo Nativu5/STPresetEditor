@@ -18,7 +18,6 @@ The default SillyTavern preset editor offers basic functionality but can be slow
 
 This project enhances your editing experience with an intuitive, high-performance and powerful UI/UX.
 
-
 <table>
   <tr>
     <td align="center" style="border: 1px solid #ddd; padding: 8px;">

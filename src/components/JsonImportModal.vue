@@ -1,6 +1,21 @@
+<script setup>
+import { ref } from 'vue';
+import { usePresetStore } from '../stores/presetStore';
+import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
+import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+
+const store = usePresetStore();
+const jsonInput = ref('');
+
+function importJson() {
+  store.importNewJson(jsonInput.value);
+  store.closeImportModal();
+}
+</script>
+
 <template>
-  <TransitionRoot appear :show="isOpen" as="template">
-    <Dialog as="div" class="relative z-50" @close="closeModal">
+  <TransitionRoot appear :show="store.isImportModalOpen" as="template">
+    <Dialog as="div" class="relative z-50" @close="store.closeImportModal">
       <TransitionChild
         as="template"
         enter="duration-300 ease-out"
@@ -52,7 +67,7 @@
                 <button
                   type="button"
                   class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
-                  @click="closeModal"
+                  @click="store.closeImportModal"
                 >
                   Cancel
                 </button>
@@ -71,25 +86,3 @@
     </Dialog>
   </TransitionRoot>
 </template>
-
-<script setup>
-import { ref } from 'vue';
-import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
-
-defineProps({
-  isOpen: Boolean,
-});
-
-const emit = defineEmits(['close', 'import']);
-const jsonInput = ref('');
-
-function closeModal() {
-  emit('close');
-}
-
-function importJson() {
-  emit('import', jsonInput.value);
-  closeModal();
-}
-</script>
