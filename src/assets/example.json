@@ -41,7 +41,7 @@
     },
     {
       "name": "Variable Example",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
       "content": "{{setvar::language::中文}}\n当前语言设置为 {{getvar::language}}。\n\n点击 setvar 或 getvar，在右侧查看详细的变量信息。\n\n点击右侧 Variables 选项卡，可以查看完整的变量列表、全局重命名变量。\n\n请继续向下滚动到底部，探索更多使用方式。",
       "identifier": "variableExample",
@@ -50,7 +50,7 @@
     },
     {
       "name": "Random Example",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
       "content": "{{random::选项1::选项2::选项3}}",
       "identifier": "randomExample",
@@ -59,7 +59,7 @@
     },
     {
       "name": "Comment Example",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
       "content": "{{//这是一个注释宏，AI 会忽略此内容}}\n{{//\n宏可以跨越多行；\n但不可以嵌套}}",
       "identifier": "commentExample",
@@ -70,10 +70,10 @@
       "name": "Auxiliary Prompt",
       "system_prompt": true,
       "role": "system",
-      "content": "我被添加到编辑器中了！\n\n点击卡片右上角的开关，可以切换 Prompt 的启用状态。还可以在右上角的菜单中暂时隐藏 Prompt，或永久删除 Prompt。\n\n你可以在右侧自由编辑 Prompt 的信息。\n\n现在，请向下滚动查看宏（Macro) 的实例。\n\n{{setvar::hiddenVar::123}}",
+      "content": "我被添加到编辑器中了！\n\n点击卡片右上角的开关，可以切换 Prompt 的启用状态。还可以在右上角的菜单中暂时隐藏 Prompt，或永久删除 Prompt。\n\n你可以在右侧自由编辑 Prompt 的信息。\n\n{{setvar::hiddenVar::Auxiliary Prompt 定义了一个变量}}\n\n现在，请向下滚动查看宏（Macro) 的实例。",
       "identifier": "nsfw",
       "id": "nsfw",
-      "enabled": false
+      "enabled": true
     },
     {
       "identifier": "dialogueExamples",
@@ -160,7 +160,7 @@
     },
     {
       "name": "Custom Prompt 1",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
       "content": "{{setvar::customVar1::value1}}\n我们已经定义了customVar1。",
       "identifier": "123e4567-e89b-12d3-a456-426614174000",
@@ -169,7 +169,7 @@
     },
     {
       "name": "Custom Prompt 2",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
       "content": "在后续 Prompt 中引用变量 {{getvar::customVar1}}。",
       "identifier": "123e4567-e89b-12d3-a456-426614174001",
@@ -178,8 +178,8 @@
     },
     {
       "name": "Introduction",
-      "system_prompt": true,
-      "role": "system",
+      "system_prompt": false,
+      "role": "assistant",
       "content": "欢迎使用 SillyTavern 预设编辑器。\n\n所有的 Prompt 都在左侧 Prompt Library 中。点击左侧的 Prompt 可以快速导航到 Prompt 在编辑器中的位置。\n\n现在请在左侧找到 \"Auxiliary Prompt\"，点击 \"+\" 将其添加到编辑器中。",
       "identifier": "123e4567-e89b-12d3-a456-426614174002",
       "id": "123e4567-e89b-12d3-a456-426614174002",
@@ -187,7 +187,7 @@
     },
     {
       "name": "Conclusion",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
       "content": "编辑器会将变更自动保存到浏览器中。\n\n你可以点击 Import/Export 按钮，导入或导出 Preset 文件。\n\n恭喜您完成了教程！Happy Editing！",
       "identifier": "123e4567-e89b-12d3-a456-426614174003",
@@ -196,16 +196,16 @@
     },
     {
       "name": "Undefined Variable Example",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
-      "content": "{{getvar::undefinedVar}}\n引用的变量从未被赋值。\n\n{{getvar::hiddenVar}}\n引用的变量在当前编辑区不可见。",
+      "content": "{{getvar::undefinedVar}}\n引用的变量从未被赋值。\n\n{{getvar::hiddenVar}}\n变量的定义情况，随 Prompt 的启用/隐藏变化。",
       "identifier": "123e4567-e89b-12d3-a456-426614174004",
       "id": "123e4567-e89b-12d3-a456-426614174004",
       "enabled": true
     },
     {
       "name": "Unused Variable Example",
-      "system_prompt": true,
+      "system_prompt": false,
       "role": "system",
       "content": "{{setvar::unusedVar::valueUnused}}\n此变量未被后续使用。",
       "identifier": "123e4567-e89b-12d3-a456-426614174005",

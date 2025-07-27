@@ -25,8 +25,13 @@
       <textarea
         id="prompt-content"
         :value="prompt.content"
+        :readonly="prompt.marker"
+        :class="{
+          'cursor-not-allowed bg-gray-100': prompt.marker,
+          'bg-white': !prompt.marker,
+        }"
         rows="15"
-        class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono shadow-sm transition focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm"
+        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono shadow-sm transition focus:border-blue-500 focus:ring-blue-500 focus:outline-none sm:text-sm"
         @input="updateDetail('content', $event.target.value)"
       />
     </div>

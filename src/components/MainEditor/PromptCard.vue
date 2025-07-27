@@ -16,20 +16,87 @@
         </h3>
       </div>
       <div class="flex items-center space-x-2">
-        <Switch
-          v-model="isEnabled"
-          :class="isEnabled ? 'bg-blue-600' : 'bg-gray-300'"
-          class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-        >
-          <span
-            :class="isEnabled ? 'translate-x-6' : 'translate-x-1'"
-            class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-          />
-        </Switch>
+        <Menu as="div" class="relative inline-block text-left">
+          <v-tooltip>
+            <MenuButton
+              class="inline-flex w-full justify-center rounded-md p-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              @click.stop
+            >
+              <component :is="RoleIcon" class="h-5 w-5" aria-hidden="true" />
+            </MenuButton>
+            <template #popper>Role: {{ currentRole }}</template>
+          </v-tooltip>
+
+          <transition
+            enter-active-class="transition duration-100 ease-out"
+            enter-from-class="transform scale-95 opacity-0"
+            enter-to-class="transform scale-100 opacity-100"
+            leave-active-class="transition duration-75 ease-in"
+            leave-from-class="transform scale-100 opacity-100"
+            leave-to-class="transform scale-95 opacity-0"
+          >
+            <MenuItems
+              class="absolute right-0 z-10 mt-2 w-40 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-md ring-1 ring-gray-200 focus:outline-none"
+            >
+              <div class="px-1 py-1">
+                <MenuItem v-slot="{ active }">
+                  <button
+                    :class="[
+                      active ? 'bg-blue-500 text-white' : 'text-gray-900',
+                      'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                    ]"
+                    @click.stop="setRole('system')"
+                  >
+                    <Cog6ToothIcon class="mr-2 h-5 w-5" />
+                    System
+                  </button>
+                </MenuItem>
+                <MenuItem v-slot="{ active }">
+                  <button
+                    :class="[
+                      active ? 'bg-blue-500 text-white' : 'text-gray-900',
+                      'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                    ]"
+                    @click.stop="setRole('user')"
+                  >
+                    <UserIcon class="mr-2 h-5 w-5" />
+                    User
+                  </button>
+                </MenuItem>
+                <MenuItem v-slot="{ active }">
+                  <button
+                    :class="[
+                      active ? 'bg-blue-500 text-white' : 'text-gray-900',
+                      'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                    ]"
+                    @click.stop="setRole('assistant')"
+                  >
+                    <ChatBubbleOvalLeftIcon class="mr-2 h-5 w-5" />
+                    Assistant
+                  </button>
+                </MenuItem>
+              </div>
+            </MenuItems>
+          </transition>
+        </Menu>
+
+        <div @click.stop>
+          <Switch
+            v-model="isEnabled"
+            :class="isEnabled ? 'bg-blue-600' : 'bg-gray-300'"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+          >
+            <span
+              :class="isEnabled ? 'translate-x-6' : 'translate-x-1'"
+              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+            />
+          </Switch>
+        </div>
         <Menu as="div" class="relative inline-block text-left">
           <div>
             <MenuButton
               class="inline-flex w-full justify-center rounded-md p-1 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              @click.stop
             >
               <EllipsisVerticalIcon class="h-5 w-5" aria-hidden="true" />
             </MenuButton>
@@ -63,12 +130,20 @@
                 <MenuItem v-slot="{ active }">
                   <button
                     :class="[
-                      active ? 'bg-red-500 text-white' : 'text-gray-900',
                       'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                      prompt.system_prompt
+                        ? (active ? 'bg-gray-200 text-gray-500' : 'text-gray-400')
+                        : (active ? 'bg-red-500 text-white' : 'text-gray-900')
                     ]"
                     @click.stop="removePrompt"
                   >
-                    <TrashIcon class="mr-2 h-5 w-5 text-red-400" aria-hidden="true" />
+                    <TrashIcon
+                      :class="[
+                        'mr-2 h-5 w-5',
+                        prompt.system_prompt ? 'text-gray-300' : 'text-red-400'
+                      ]"
+                      aria-hidden="true"
+                    />
                     Delete
                   </button>
                 </MenuItem>
@@ -97,7 +172,15 @@ import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import MacroRenderer from './MacroRenderer.vue';
 import { Switch, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import { Bars3Icon, EllipsisVerticalIcon, EyeSlashIcon, TrashIcon } from '@heroicons/vue/20/solid';
+import {
+  Bars3Icon,
+  EllipsisVerticalIcon,
+  EyeSlashIcon,
+  TrashIcon,
+  UserIcon,
+  Cog6ToothIcon,
+  ChatBubbleOvalLeftIcon,
+} from '@heroicons/vue/20/solid';
 
 const props = defineProps({
   /** @type {import('vue').PropType<import('../../stores/presetStore').PartialPrompt>} */
@@ -119,6 +202,24 @@ const isEnabled = computed({
     store.togglePromptEnabled(props.prompt.id);
   },
 });
+
+const currentRole = computed(() => props.prompt.role || 'system');
+
+const roleIcons = {
+  system: Cog6ToothIcon,
+  user: UserIcon,
+  assistant: ChatBubbleOvalLeftIcon,
+};
+
+const RoleIcon = computed(() => roleIcons[currentRole.value]);
+
+const setRole = (newRole) => {
+  store.updatePromptDetail({
+    promptId: props.prompt.id,
+    field: 'role',
+    value: newRole,
+  });
+};
 
 /**
  * @returns {Array<{isMacro: boolean, content?: string, macroData?: import('../../stores/presetStore').MacroData}>}
@@ -177,6 +278,10 @@ const hidePrompt = () => {
 };
 
 const removePrompt = () => {
+  if (props.prompt.system_prompt) {
+    alert('This is a system prompt and cannot be deleted.');
+    return;
+  }
   if (window.confirm(`Are you sure you want to permanently delete "${props.prompt.name}"?`)) {
     store.removePrompt(props.prompt.id);
   }

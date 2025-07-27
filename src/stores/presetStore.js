@@ -368,6 +368,9 @@ export const usePresetStore = defineStore('preset', {
         name: 'New Untitled Prompt',
         content: '{{// This is a new prompt. Add your content here.}}',
         enabled: true, // Start enabled to be part of analysis
+        role: 'system',
+        system_prompt: false,
+        marker: false,
       };
       this.prompts[newId] = newPrompt;
       this.promptOrder.unshift(newId);
