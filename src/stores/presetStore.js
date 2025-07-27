@@ -107,6 +107,18 @@ export const usePresetStore = defineStore('preset', {
       }
       return JSON.stringify(preset, null, 2);
     },
+    variableStats: (state) => {
+      // Calculate the number of variables that are defined but never referenced.
+      const unreferencedCount = Object.values(state.variables).filter(
+        (v) => v.definedIn.length > 0 && v.referencedIn.length === 0,
+      ).length;
+
+      return {
+        // The count of variables that are referenced but never defined.
+        undefinedCount: state.unresolvedVariables.length,
+        unreferencedCount: unreferencedCount,
+      };
+    },
   },
   actions: {
     // --- Initialization and Core Logic ---

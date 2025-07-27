@@ -2,7 +2,32 @@
   <div class="flex h-full flex-col space-y-4">
     <!-- Variable List for Navigation -->
     <div class="flex-shrink-0 rounded-lg border border-gray-200 p-2">
-      <h4 class="mb-2 border-b border-gray-200 px-2 pb-1 text-base font-semibold">Variable List</h4>
+      <!-- Header with stats -->
+      <div class="mb-2 flex items-center justify-between border-b border-gray-200 pb-1">
+        <h4 class="px-2 text-base font-semibold">Variable List</h4>
+        <!-- Stats display -->
+        <div
+          v-if="stats.unreferencedCount > 0 || stats.undefinedCount > 0"
+          class="flex items-center space-x-3 px-2"
+        >
+          <span
+            v-if="stats.unreferencedCount > 0"
+            v-tooltip="'Defined but never referenced'"
+            class="flex items-center text-xs font-medium text-yellow-500"
+          >
+            <QuestionMarkCircleIcon class="mr-1 h-4 w-4" />
+            {{ stats.unreferencedCount }}
+          </span>
+          <span
+            v-if="stats.undefinedCount > 0"
+            v-tooltip="'Referenced but never defined'"
+            class="flex items-center text-xs font-medium text-red-500"
+          >
+            <ExclamationCircleIcon class="mr-1 h-4 w-4" />
+            {{ stats.undefinedCount }}
+          </span>
+        </div>
+      </div>
       <div class="max-h-48 overflow-y-auto">
         <ul class="space-y-1">
           <li v-for="variable in variables" :key="`nav-${variable}`">
@@ -14,12 +39,12 @@
                 <VariableIcon class="mr-2 h-4 w-4 text-gray-500" />
                 <span>{{ variable }}</span>
                 <!-- Unused variable icon -->
-                <ExclamationCircleIcon
+                <QuestionMarkCircleIcon
                   v-if="isDefinedButUnused(variable)"
                   v-tooltip="{ content: 'Defined but never referenced', placement: 'top' }"
                   class="ml-2 h-4 w-4 text-yellow-500"
                 />
-                <QuestionMarkCircleIcon
+                <ExclamationCircleIcon
                   v-if="isUnresolved(variable)"
                   v-tooltip="{ content: 'Referenced but never defined', placement: 'top' }"
                   class="ml-2 h-4 w-4 text-red-500"
@@ -163,6 +188,7 @@ const isUnresolved = (variable) => {
 
 const store = usePresetStore();
 const variables = computed(() => store.definedVariables);
+const stats = computed(() => store.variableStats);
 
 // For Rename Tool
 const selectedVariableForRename = ref(null);

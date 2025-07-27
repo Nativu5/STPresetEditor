@@ -132,15 +132,19 @@
                     :class="[
                       'group flex w-full items-center rounded-md px-2 py-2 text-sm',
                       prompt.system_prompt
-                        ? (active ? 'bg-gray-200 text-gray-500' : 'text-gray-400')
-                        : (active ? 'bg-red-500 text-white' : 'text-gray-900')
+                        ? active
+                          ? 'bg-gray-200 text-gray-500'
+                          : 'text-gray-400'
+                        : active
+                          ? 'bg-red-500 text-white'
+                          : 'text-gray-900',
                     ]"
                     @click.stop="removePrompt"
                   >
                     <TrashIcon
                       :class="[
                         'mr-2 h-5 w-5',
-                        prompt.system_prompt ? 'text-gray-300' : 'text-red-400'
+                        prompt.system_prompt ? 'text-gray-300' : 'text-red-400',
                       ]"
                       aria-hidden="true"
                     />
