@@ -37,7 +37,7 @@ const resetToDefault = () => {
     <div class="flex-1 md:hidden"></div>
 
     <!-- Mobile: Centered Title -->
-    <h1 class="absolute left-1/2 -translate-x-1/2 text-lg font-bold md:hidden">Editor</h1>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-lg font-bold md:hidden">📝 STPE</h1>
 
     <!-- Desktop: Action Buttons -->
     <div class="hidden items-center space-x-3 md:flex">
