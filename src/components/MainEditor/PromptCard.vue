@@ -110,9 +110,47 @@
             leave-to-class="transform scale-95 opacity-0"
           >
             <MenuItems
-              class="absolute right-0 z-10 mt-2 w-40 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-md ring-1 ring-gray-200 focus:outline-none"
+              class="absolute right-0 z-10 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none"
             >
               <div class="px-1 py-1">
+                <MenuItem v-slot="{ active }">
+                  <button
+                    :class="[
+                      active ? 'bg-blue-500 text-white' : 'text-gray-900',
+                      'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                    ]"
+                    @click.stop="store.movePromptTop(prompt.id)"
+                  >
+                    <ArrowUpCircleIcon class="mr-2 h-5 w-5 text-blue-400" />
+                    Move to Top
+                  </button>
+                </MenuItem>
+                <MenuItem v-slot="{ active }">
+                  <button
+                    :class="[
+                      active ? 'bg-blue-500 text-white' : 'text-gray-900',
+                      'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                    ]"
+                    @click.stop="store.movePromptBottom(prompt.id)"
+                  >
+                    <ArrowDownCircleIcon class="mr-2 h-5 w-5 text-blue-400" />
+                    Move to Bottom
+                  </button>
+                </MenuItem>
+              </div>
+              <div class="px-1 py-1">
+                <MenuItem v-slot="{ active }">
+                  <button
+                    :class="[
+                      active ? 'bg-blue-500 text-white' : 'text-gray-900',
+                      'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                    ]"
+                    @click.stop="store.duplicatePrompt(prompt.id)"
+                  >
+                    <DocumentDuplicateIcon class="mr-2 h-5 w-5 text-green-400" />
+                    Duplicate
+                  </button>
+                </MenuItem>
                 <MenuItem v-slot="{ active }">
                   <button
                     :class="[
@@ -132,9 +170,7 @@
                     :class="[
                       'group flex w-full items-center rounded-md px-2 py-2 text-sm',
                       prompt.system_prompt
-                        ? active
-                          ? 'bg-gray-200 text-gray-500'
-                          : 'text-gray-400'
+                        ? 'cursor-not-allowed text-gray-400'
                         : active
                           ? 'bg-red-500 text-white'
                           : 'text-gray-900',
@@ -184,6 +220,9 @@ import {
   UserIcon,
   Cog6ToothIcon,
   ChatBubbleOvalLeftIcon,
+  DocumentDuplicateIcon,
+  ArrowUpCircleIcon,
+  ArrowDownCircleIcon,
 } from '@heroicons/vue/20/solid';
 
 const props = defineProps({

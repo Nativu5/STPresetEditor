@@ -316,7 +316,50 @@ export const usePresetStore = defineStore('preset', {
     // --- Actions that trigger re-analysis ---
     updatePromptOrder(newOrder) {
       this.promptOrder = newOrder.map((p) => p.id);
-      this.analyzeAllMacros(); // Order change is instant, no debounce
+      this.analyzeAllMacros();
+    },
+    movePromptTop(promptId) {
+      const index = this.promptOrder.indexOf(promptId);
+      if (index > 0) {
+        this.promptOrder.splice(index, 1);
+        this.promptOrder.unshift(promptId);
+        this.analyzeAllMacros();
+      }
+    },
+    movePromptBottom(promptId) {
+      const index = this.promptOrder.indexOf(promptId);
+      if (index > -1 && index < this.promptOrder.length - 1) {
+        this.promptOrder.splice(index, 1);
+        this.promptOrder.push(promptId);
+        this.analyzeAllMacros();
+      }
+    },
+    duplicatePrompt(promptId) {
+      const originalPrompt = this.prompts[promptId];
+      if (!originalPrompt) return;
+
+      const newId = window.crypto.randomUUID();
+      const newPrompt = {
+        ...originalPrompt,
+        id: newId,
+        identifier: newId,
+        name: `${originalPrompt.name} (Copied)`,
+        system_prompt: false, // Duplicated prompts are not system prompts
+        marker: false, // Duplicated prompts are not markers
+      };
+
+      this.prompts[newId] = newPrompt;
+
+      const originalIndex = this.promptOrder.indexOf(promptId);
+      if (originalIndex > -1) {
+        this.promptOrder.splice(originalIndex + 1, 0, newId);
+      } else {
+        this.promptOrder.push(newId);
+      }
+
+      this.analyzeAllMacros();
+      this.selectPrompt(newId);
+      this.navigateToPrompt(newId);
     },
     hidePrompt(promptId) {
       this.promptOrder = this.promptOrder.filter((id) => id !== promptId);
