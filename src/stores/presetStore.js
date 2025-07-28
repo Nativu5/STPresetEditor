@@ -428,7 +428,14 @@ export const usePresetStore = defineStore('preset', {
         marker: false,
       };
       this.prompts[newId] = newPrompt;
-      this.promptOrder.unshift(newId);
+
+      const selectedIndex = this.promptOrder.indexOf(this.selectedPromptId);
+      if (selectedIndex !== -1) {
+        this.promptOrder.splice(selectedIndex + 1, 0, newId);
+      } else {
+        this.promptOrder.unshift(newId);
+      }
+
       this.analyzeAllMacros();
       this.selectPrompt(newId);
       this.navigateToPrompt(newId);
@@ -451,7 +458,12 @@ export const usePresetStore = defineStore('preset', {
     },
     addPromptToOrder(promptId) {
       if (!this.promptOrder.includes(promptId)) {
-        this.promptOrder.unshift(promptId);
+        const selectedIndex = this.promptOrder.indexOf(this.selectedPromptId);
+        if (selectedIndex !== -1) {
+          this.promptOrder.splice(selectedIndex + 1, 0, promptId);
+        } else {
+          this.promptOrder.unshift(promptId);
+        }
         this.analyzeAllMacros();
         this.navigateToPrompt(promptId);
       }
