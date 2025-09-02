@@ -1,5 +1,6 @@
-import { defineStore } from 'pinia';
 import { debounce } from 'lodash-es';
+import { defineStore } from 'pinia';
+import languageData from '../assets/languages.json';
 
 /**
  * @typedef {object} MacroData
@@ -29,6 +30,7 @@ function debouncedAction(action, delay) {
 export const usePresetStore = defineStore('preset', {
   state: () => ({
     rawJson: '',
+    originalFilename: '', // 存储导入的原始文件名
     prompts: {},
     promptOrder: [],
     selectedPromptId: null,
@@ -42,6 +44,7 @@ export const usePresetStore = defineStore('preset', {
     isMultiSelectActive: false,
     selectedLibraryPrompts: new Set(),
     librarySearchTerm: '',
+    editorSearchTerm: '',
     scrollToPromptId: null,
     activeRightSidebarTab: 'details', // 'details' or 'variables'
     macroDisplayMode: 'raw', // 'raw' or 'preview'
@@ -56,6 +59,12 @@ export const usePresetStore = defineStore('preset', {
 
     // Responsive state
     isMobile: false,
+
+    // Global collapse state
+    globalCollapseState: 'expanded', // 'expanded', 'collapsed', or 'mixed'
+
+    // Language state
+    currentLanguage: 'en', // 'en' or 'zh'
   }),
   getters: {
     getPromptById: (state) => (id) => {
@@ -68,9 +77,20 @@ export const usePresetStore = defineStore('preset', {
       return Object.keys(state.variables).sort();
     },
     orderedPrompts: (state) => {
-      return state.promptOrder
+      const prompts = state.promptOrder
         .map((id) => (state.prompts[id] ? { ...state.prompts[id], id } : null))
         .filter((p) => p !== null);
+
+      // 如果Editor搜索词为空，返回所有prompts
+      if (!state.editorSearchTerm) {
+        return prompts;
+      }
+
+      // 根据搜索词过滤prompts
+      const searchTerm = state.editorSearchTerm.toLowerCase();
+      return prompts.filter(
+        (p) => p.name.toLowerCase().includes(searchTerm) || p.id.toLowerCase().includes(searchTerm),
+      );
     },
     libraryPrompts: (state) => {
       const allPrompts = Object.values(state.prompts).sort((a, b) => a.name.localeCompare(b.name));
@@ -94,17 +114,46 @@ export const usePresetStore = defineStore('preset', {
 
       preset.prompts = cleanedPrompts;
 
+      // 基于编辑器当前状态重新生成prompt_order
+      // 只包含在编辑器中的prompts（promptOrder中的项目）
+      const editorPrompts = state.promptOrder
+        .map((id) => ({
+          identifier: id,
+          enabled: state.prompts[id]?.enabled !== false,
+        }))
+        .filter((item) => state.prompts[item.identifier]); // 确保prompt存在
+
+      // 创建或更新prompt_order配置
       if (Array.isArray(preset.prompt_order)) {
-        const characterOrderIndex = preset.prompt_order.findIndex(
+        // 优先更新 character_id: 100001 的排序
+        let characterOrderIndex = preset.prompt_order.findIndex(
           (item) => item.character_id === 100001,
         );
-        if (characterOrderIndex !== -1) {
-          preset.prompt_order[characterOrderIndex].order = state.promptOrder.map((id) => ({
-            identifier: id,
-            enabled: state.prompts[id]?.enabled !== false,
-          }));
+
+        // 如果没有找到 100001，则使用第一个可用的
+        if (characterOrderIndex === -1 && preset.prompt_order.length > 0) {
+          characterOrderIndex = 0;
         }
+
+        if (characterOrderIndex !== -1) {
+          preset.prompt_order[characterOrderIndex].order = editorPrompts;
+        } else {
+          // 如果没有找到任何可用的排序配置，创建新的
+          preset.prompt_order.push({
+            character_id: 100001,
+            order: editorPrompts,
+          });
+        }
+      } else {
+        // 如果没有 prompt_order，创建一个默认的
+        preset.prompt_order = [
+          {
+            character_id: 100001,
+            order: editorPrompts,
+          },
+        ];
       }
+
       return JSON.stringify(preset, null, 2);
     },
     variableStats: (state) => {
@@ -119,6 +168,24 @@ export const usePresetStore = defineStore('preset', {
         unreferencedCount: unreferencedCount,
       };
     },
+    // Language getter
+    t:
+      (state) =>
+      (key, params = {}) => {
+        const keys = key.split('.');
+        let value = languageData[state.currentLanguage];
+        for (const k of keys) {
+          value = value?.[k];
+        }
+        if (!value) return key;
+
+        // Replace parameters in the string
+        let result = value;
+        for (const [paramKey, paramValue] of Object.entries(params)) {
+          result = result.replace(`{${paramKey}}`, paramValue);
+        }
+        return result;
+      },
   },
   actions: {
     // --- Initialization and Core Logic ---
@@ -128,10 +195,11 @@ export const usePresetStore = defineStore('preset', {
       this.parseFromJson(jsonString);
     },
 
-    importNewJson(jsonString) {
+    importNewJson(jsonString, filename = '') {
       // This is called when user imports new JSON
       // It will automatically be persisted by the plugin
       console.log('[Persistence] User imported new JSON, will be auto-saved');
+      this.originalFilename = filename;
       this.parseFromJson(jsonString);
     },
     parseFromJson(jsonString) {
@@ -139,29 +207,69 @@ export const usePresetStore = defineStore('preset', {
         this.rawJson = jsonString;
         const parsed = JSON.parse(jsonString);
         const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+
+        // 构建 prompts 对象
         this.prompts = promptsArray.reduce((acc, prompt) => {
           const id = prompt.identifier || prompt.name;
           if (id) acc[id] = { ...prompt, id };
           return acc;
         }, {});
-        const characterOrder = Array.isArray(parsed.prompt_order)
-          ? parsed.prompt_order.find((item) => item.character_id === 100001)
-          : null;
-        if (characterOrder && Array.isArray(characterOrder.order)) {
-          const orderData = characterOrder.order;
-          this.promptOrder = orderData
-            .map((item) => item.identifier)
-            .filter((id) => id in this.prompts);
-          orderData.forEach((item) => {
-            if (this.prompts[item.identifier]) this.prompts[item.identifier].enabled = item.enabled;
-          });
+
+        // 处理 prompt_order 排序
+        if (Array.isArray(parsed.prompt_order)) {
+          // 优先使用 character_id: 100001 的排序，如果没有则使用第一个可用的
+          let characterOrder = parsed.prompt_order.find((item) => item.character_id === 100001);
+          if (!characterOrder && parsed.prompt_order.length > 0) {
+            characterOrder = parsed.prompt_order[0];
+          }
+
+          if (characterOrder && Array.isArray(characterOrder.order)) {
+            const orderData = characterOrder.order;
+
+            // 按照 prompt_order 中的顺序构建 promptOrder 数组
+            this.promptOrder = orderData
+              .map((item) => item.identifier)
+              .filter((id) => id in this.prompts);
+
+            // 设置每个 prompt 的 enabled 状态
+            orderData.forEach((item) => {
+              if (this.prompts[item.identifier]) {
+                this.prompts[item.identifier].enabled = item.enabled;
+              }
+            });
+
+            // 添加不在 prompt_order 中但存在于 prompts 中的项目
+            const orderedIds = new Set(this.promptOrder);
+            const unorderedPrompts = Object.values(this.prompts)
+              .filter((p) => !orderedIds.has(p.id))
+              .sort((a, b) => {
+                // 按 injection_order 排序，然后按 system_prompt 排序，最后按名称排序
+                const orderA = a.injection_order || 0;
+                const orderB = b.injection_order || 0;
+                if (orderA !== orderB) return orderA - orderB;
+                if (a.system_prompt !== b.system_prompt) return b.system_prompt - a.system_prompt;
+                return (a.name || '').localeCompare(b.name || '');
+              });
+
+            // 将未排序的项目添加到末尾
+            this.promptOrder.push(...unorderedPrompts.map((p) => p.id));
+          } else {
+            // 如果没有有效的 prompt_order，使用默认排序
+            this.promptOrder = promptsArray
+              .filter((p) => p.enabled !== false)
+              .sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0))
+              .map((p) => p.identifier || p.name)
+              .filter(Boolean);
+          }
         } else {
+          // 如果没有 prompt_order，使用默认排序
           this.promptOrder = promptsArray
             .filter((p) => p.enabled !== false)
             .sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0))
             .map((p) => p.identifier || p.name)
             .filter(Boolean);
         }
+
         this.analyzeAllMacros();
       } catch (error) {
         console.error('Failed to parse JSON string:', error);
@@ -343,7 +451,7 @@ export const usePresetStore = defineStore('preset', {
         ...originalPrompt,
         id: newId,
         identifier: newId,
-        name: `${originalPrompt.name} (Copied)`,
+        name: `${originalPrompt.name} (${this.t('promptCard.copied')})`,
         system_prompt: false, // Duplicated prompts are not system prompts
         marker: false, // Duplicated prompts are not markers
       };
@@ -392,7 +500,7 @@ export const usePresetStore = defineStore('preset', {
         trimmedNewName.includes(' ') ||
         (this.variables[trimmedNewName] && trimmedNewName !== oldName)
       ) {
-        window.alert('Invalid or conflicting new variable name.');
+        window.alert(this.t('variableManager.invalidVariableName'));
         return false;
       }
 
@@ -420,8 +528,8 @@ export const usePresetStore = defineStore('preset', {
       const newPrompt = {
         id: newId,
         identifier: newId,
-        name: 'New Untitled Prompt',
-        content: '{{// This is a new prompt. Add your content here.}}',
+        name: this.t('promptCard.newUntitledPrompt'),
+        content: `{{// ${this.t('promptCard.newPromptContent')}}}`,
         enabled: true, // Start enabled to be part of analysis
         role: 'system',
         system_prompt: false,
@@ -444,7 +552,7 @@ export const usePresetStore = defineStore('preset', {
       if (this.selectedLibraryPrompts.size === 0) return;
       if (
         window.confirm(
-          `Are you sure you want to permanently delete ${this.selectedLibraryPrompts.size} selected prompt(s)?`,
+          this.t('delete.confirm').replace('{count}', this.selectedLibraryPrompts.size),
         )
       ) {
         this.selectedLibraryPrompts.forEach((promptId) => {
@@ -503,6 +611,9 @@ export const usePresetStore = defineStore('preset', {
       this.librarySearchTerm = term;
       this.selectedLibraryPrompts.clear();
     },
+    setEditorSearch(term) {
+      this.editorSearchTerm = term;
+    },
     navigateToPrompt(promptId) {
       this.scrollToPromptId = promptId;
     },
@@ -542,10 +653,55 @@ export const usePresetStore = defineStore('preset', {
     setIsMobile(isMobile) {
       this.isMobile = isMobile;
     },
+
+    // Global collapse state management
+    collapseAllPrompts() {
+      this.globalCollapseState = 'collapsed';
+    },
+
+    expandAllPrompts() {
+      this.globalCollapseState = 'expanded';
+    },
+
+    // 生成导出文件名
+    generateExportFilename() {
+      if (!this.originalFilename) {
+        return 'preset.json';
+      }
+
+      // 移除原始文件的扩展名
+      const nameWithoutExt = this.originalFilename.replace(/\.json$/i, '');
+
+      // 生成日期后缀 (YYYYMMDD)
+      const now = new Date();
+      const dateStr =
+        now.getFullYear().toString() +
+        (now.getMonth() + 1).toString().padStart(2, '0') +
+        now.getDate().toString().padStart(2, '0');
+
+      return `${nameWithoutExt}-${dateStr}.json`;
+    },
+
+    // Language actions
+    setLanguage(language) {
+      if (['en', 'zh'].includes(language)) {
+        this.currentLanguage = language;
+      }
+    },
+    toggleLanguage() {
+      this.currentLanguage = this.currentLanguage === 'en' ? 'zh' : 'en';
+    },
   },
   persist: {
     // Only persist the essential user data, not derived/UI states
-    pick: ['rawJson', 'prompts', 'promptOrder', 'macroDisplayMode'],
+    pick: [
+      'rawJson',
+      'originalFilename',
+      'prompts',
+      'promptOrder',
+      'macroDisplayMode',
+      'currentLanguage',
+    ],
     beforeHydrate: () => {
       console.log('[Persistence] About to hydrate store from localStorage');
     },

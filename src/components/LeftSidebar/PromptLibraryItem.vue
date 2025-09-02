@@ -1,5 +1,6 @@
 <template>
   <div
+    :data-id="prompt.id"
     class="relative mb-2 flex cursor-pointer items-center justify-between rounded-md border p-2 shadow-sm transition-colors duration-150"
     :class="{
       'border-blue-300 bg-blue-50': isSelectedInLibrary,
@@ -16,6 +17,10 @@
         @click.stop
         @change="toggleSelection"
       />
+      <!-- 拖拽手柄 -->
+      <div class="drag-handle mr-2 cursor-grab active:cursor-grabbing">
+        <Bars3Icon class="h-4 w-4 text-gray-400" />
+      </div>
       <div class="flex-grow">
         <p class="text-sm font-semibold">
           {{ prompt.name }}
@@ -28,12 +33,11 @@
 
     <div class="ml-2 flex-shrink-0">
       <button
-        :title="isInOrder ? 'Prompt is already in the editor' : 'Add prompt to editor'"
+        :title="isInOrder ? store.t('promptLibraryItem.removeFromEditor') : store.t('promptLibraryItem.addToEditor')"
         class="rounded-full p-1 transition-colors hover:bg-gray-200"
-        :disabled="isInOrder"
         @click.stop="addOrNavigate"
       >
-        <CheckCircleIcon v-if="isInOrder" class="h-6 w-6 text-green-500" />
+        <CheckCircleIcon v-if="isInOrder" class="h-6 w-6 text-green-500 hover:text-red-500" />
         <PlusCircleIcon v-else class="h-6 w-6 text-gray-400 hover:text-gray-600" />
       </button>
     </div>
@@ -41,9 +45,10 @@
 </template>
 
 <script setup>
+import { Bars3Icon } from '@heroicons/vue/24/outline';
+import { CheckCircleIcon, PlusCircleIcon } from '@heroicons/vue/24/solid';
 import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
-import { CheckCircleIcon, PlusCircleIcon } from '@heroicons/vue/24/solid';
 
 const props = defineProps({
   prompt: {
@@ -73,7 +78,7 @@ const handleClick = () => {
 
 const addOrNavigate = () => {
   if (isInOrder.value) {
-    store.navigateToPrompt(props.prompt.id);
+    store.hidePrompt(props.prompt.id);
   } else {
     store.addPromptToOrder(props.prompt.id);
   }

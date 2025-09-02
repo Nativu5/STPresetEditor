@@ -1,83 +1,26 @@
-# SillyTavern Preset Editor
+## STPresetEditor 新增功能
 
-<div>
-    <img src="https://img.shields.io/badge/Vue-3.x-brightgreen.svg" alt="Vue 3">
-    <img src="https://img.shields.io/badge/TailwindCSS-4.x-blue.svg" alt="Tailwind CSS">
-    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License">
-</div>
+### 🎯 交互体验优化
+- **按钮切换**: 左侧边栏已添加状态的按钮可再次点击回到未添加状态
+- **拖拽插入**: 支持从左侧Prompt Library拖拽卡片到中间编辑器区域
+- **卡片折叠/展开**: 编辑器中的卡片支持折叠/展开，提供一键折叠/展开所有卡片功能
 
-A lightweight, user-friendly web editor for managing SillyTavern `preset.json` files efficiently, powered by Vue.js and Tailwind CSS.
+### 📁 文件操作增强
+- **JSON文件导入**: 支持直接导入JSON文件，提供文件选择和拖拽上传两种方式
+- **导出功能优化**: 支持导出JSON文件下载，文件名可自定义并自动添加日期后缀
+- **SillyTavern排序**: 完全兼容SillyTavern的预设格式和排序机制
 
-**🌐 Try it online:** [https://stpe.nativus.workers.dev/](https://stpe.nativus.workers.dev/)
+### 🔍 搜索功能
+- **Editor区域搜索**: 在编辑器区域添加搜索功能，与Prompt Library风格保持一致
+- **实时过滤**: 支持按名称和ID进行模糊匹配，使用防抖优化性能
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2FNativu5%2FSTPresetEditor)
+### 🌐 国际化支持
+- **多语言切换**: 支持英文和简体中文切换，提供圆形语言切换按钮
+- **完整覆盖**: 所有界面文本、按钮、提示信息都支持国际化
+- **持久化存储**: 用户语言偏好自动保存
 
-## 🖼 Overview
-
-The default SillyTavern preset editor offers basic functionality but can be slow and lacks advanced editing features (e.g., macro highlighting, variable management).
-
-This project enhances your editing experience with an intuitive, high-performance and powerful UI/UX.
-
-<table>
-  <tr>
-    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
-      <img src="https://github.com/user-attachments/assets/24a8cbf7-932a-4dba-9852-64752fbc406c" alt="Main Editor" height="200" />
-      <br>Prompt Manage & Edit
-    </td>
-    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
-      <img src="https://github.com/user-attachments/assets/86f3ca7b-0a86-4dc7-9ee3-0045fc4544d8" alt="Macro Analysis" height="200" />
-      <br>Macro Analysis & Preview
-    </td>
-    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
-      <img src="https://github.com/user-attachments/assets/4a2c883c-710e-40aa-9cce-f3be7770e5ad" alt="Variable Manager" height="200" />
-      <br>Variable Tools
-    </td>
-  </tr>
-</table>
-
-## 🎯 Key Features
-
-- ⚡ **Real-time Editing & Saving**: Instantly edit prompts with batch selection and drag-and-drop. Changes are saved locally for secure, persistent editing.
-- 🧩 **Syntax Highlighting**: Automatically highlight special macros within prompts, enabling quick reference.
-- 🔍 **Macro Analysis & Preview**: Instantly analyze macros and switch between raw and preview modes for efficient editing.
-- 📊 **Variable Management**: Efficiently rename and track variable usage across all prompts.
-
-## 🚀 Getting Started
-
-1. 📥 **Import**: Load your existing `preset.json` file via the import modal.
-2. ✏️ **Edit**: Visually manage, modify, and rearrange prompts effortlessly.
-3. 🧩 **Analyze**: Track macros and variables, viewing their usage across prompts.
-4. 📤 **Export**: Save and export your updated JSON file for use with SillyTavern.
-
-## 🚧 Development
-
-Run the development server with hot-reloading:
-
-```bash
-npm install
-npm run dev
-```
-
-Access the app at [http://localhost:5173](http://localhost:5173) (default port).
-
-## 🚢 Deployment
-
-Build for production:
-
-```bash
-npm run build
-```
-
-Deploy the contents of the generated `dist` folder to any static hosting provider (e.g., GitHub Pages, Netlify, Vercel).
-
-## 📄 License
-
-MIT License. See [LICENSE](LICENSE) for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request if you encounter any bugs or have feature suggestions.
-
----
-
-Developed by 🤖 using Vue.js and Tailwind CSS.
+## 使用方式
+1. 双击 `启动STPresetEditor.bat` 启动应用
+2. 支持导入JSON文件或直接编辑
+3. 使用拖拽、搜索、折叠等功能提升编辑效率
+4. 导出编辑完成的预设文件
