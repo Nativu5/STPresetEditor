@@ -1,21 +1,22 @@
 <script setup>
-import { usePresetStore } from '../stores/presetStore';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/vue';
 import {
-  ArrowDownTrayIcon,
-  ArrowUpTrayIcon,
-  ArrowPathIcon,
-  Bars3Icon,
-  InformationCircleIcon,
-  EllipsisVerticalIcon,
+    ArrowDownTrayIcon,
+    ArrowPathIcon,
+    ArrowUpTrayIcon,
+    Bars3Icon,
+    EllipsisVerticalIcon,
+    InformationCircleIcon,
+    LanguageIcon,
 } from '@heroicons/vue/24/outline';
+import { usePresetStore } from '../stores/presetStore';
 
 const store = usePresetStore();
 
 const resetToDefault = () => {
   if (
     window.confirm(
-      'Are you sure you want to reset all data and return to the factory default? This will permanently delete all your changes and cannot be undone.',
+      store.t('reset.confirm'),
     )
   ) {
     store.resetToFactoryDefault();
@@ -31,36 +32,44 @@ const resetToDefault = () => {
     </button>
 
     <!-- Desktop: Title -->
-    <h1 class="hidden text-xl font-bold text-gray-800 md:block">📝 SillyTavern Preset Editor</h1>
+    <h1 class="hidden text-xl font-bold text-gray-800 md:block">{{ store.t('app.title') }}</h1>
 
     <!-- Mobile: Spacer to center the title -->
     <div class="flex-1 md:hidden"></div>
 
     <!-- Mobile: Centered Title -->
-    <h1 class="absolute left-1/2 -translate-x-1/2 text-lg font-bold md:hidden">📝 STPE</h1>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-lg font-bold md:hidden">{{ store.t('app.titleMobile') }}</h1>
 
     <!-- Desktop: Action Buttons -->
     <div class="hidden items-center space-x-3 md:flex">
+      <!-- Language Toggle Button -->
+      <button
+        class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-gray-600 shadow-sm transition-colors hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none"
+        @click="store.toggleLanguage()"
+        :title="store.currentLanguage === 'en' ? '切换到中文' : 'Switch to English'"
+      >
+        <LanguageIcon class="h-5 w-5" />
+      </button>
       <button
         class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
         @click="store.isImportModalOpen = true"
       >
         <ArrowDownTrayIcon class="mr-2 -ml-1 h-5 w-5" />
-        Import
+        {{ store.t('toolbar.import') }}
       </button>
       <button
         class="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
         @click="store.isExportModalOpen = true"
       >
         <ArrowUpTrayIcon class="mr-2 -ml-1 h-5 w-5" />
-        Export
+        {{ store.t('toolbar.export') }}
       </button>
       <button
         class="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none"
         @click="resetToDefault"
       >
         <ArrowPathIcon class="mr-2 -ml-1 h-5 w-5" />
-        Reset
+        {{ store.t('toolbar.reset') }}
       </button>
     </div>
 
@@ -97,7 +106,7 @@ const resetToDefault = () => {
                   <ArrowDownTrayIcon
                     :class="[active ? 'text-blue-100' : 'text-blue-400', 'mr-2 h-5 w-5']"
                   />
-                  Import from JSON
+                  {{ store.t('toolbar.importFromJson') }}
                 </button>
               </MenuItem>
               <MenuItem v-slot="{ active }">
@@ -111,7 +120,7 @@ const resetToDefault = () => {
                   <ArrowUpTrayIcon
                     :class="[active ? 'text-green-100' : 'text-green-400', 'mr-2 h-5 w-5']"
                   />
-                  Export to JSON
+                  {{ store.t('toolbar.exportToJson') }}
                 </button>
               </MenuItem>
             </div>
@@ -127,7 +136,21 @@ const resetToDefault = () => {
                   <ArrowPathIcon
                     :class="[active ? 'text-red-100' : 'text-red-400', 'mr-2 h-5 w-5']"
                   />
-                  Reset to Default
+                  {{ store.t('toolbar.resetToDefault') }}
+                </button>
+              </MenuItem>
+              <MenuItem v-slot="{ active }">
+                <button
+                  :class="[
+                    active ? 'bg-gray-500 text-white' : 'text-gray-900',
+                    'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                  ]"
+                  @click="store.toggleLanguage()"
+                >
+                  <LanguageIcon
+                    :class="[active ? 'text-gray-100' : 'text-gray-400', 'mr-2 h-5 w-5']"
+                  />
+                  {{ store.currentLanguage === 'en' ? '切换到中文' : 'Switch to English' }}
                 </button>
               </MenuItem>
             </div>

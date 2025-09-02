@@ -11,9 +11,18 @@
     <div class="mb-2 flex items-center justify-between">
       <div class="flex items-center">
         <Bars3Icon class="mr-3 h-5 w-5 cursor-grab text-gray-400 active:cursor-grabbing" />
-        <h3 class="text-base font-bold" :class="{ 'text-gray-500': !isEnabled }">
-          {{ prompt.name }}
-        </h3>
+        <button
+          @click.stop="toggleCollapse"
+          class="flex items-center hover:bg-gray-100 rounded p-1 transition-colors"
+        >
+          <ChevronDownIcon 
+            class="mr-2 h-4 w-4 text-gray-500 transition-transform duration-200"
+            :class="{ 'rotate-[-90deg]': finalCollapsedState }"
+          />
+          <h3 class="text-base font-bold" :class="{ 'text-gray-500': !isEnabled }">
+            {{ prompt.name }}
+          </h3>
+        </button>
       </div>
       <div class="flex items-center space-x-2">
         <Menu as="div" class="relative inline-block text-left">
@@ -24,7 +33,7 @@
             >
               <component :is="RoleIcon" class="h-5 w-5" aria-hidden="true" />
             </MenuButton>
-            <template #popper>Role: {{ currentRole }}</template>
+            <template #popper>{{ store.t('promptCard.roleLabel') }}: {{ store.t(`promptCard.role.${currentRole}`) }}</template>
           </v-tooltip>
 
           <transition
@@ -48,7 +57,7 @@
                     @click.stop="setRole('system')"
                   >
                     <Cog6ToothIcon class="mr-2 h-5 w-5" />
-                    System
+                    {{ store.t('promptCard.role.system') }}
                   </button>
                 </MenuItem>
                 <MenuItem v-slot="{ active }">
@@ -60,7 +69,7 @@
                     @click.stop="setRole('user')"
                   >
                     <UserIcon class="mr-2 h-5 w-5" />
-                    User
+                    {{ store.t('promptCard.role.user') }}
                   </button>
                 </MenuItem>
                 <MenuItem v-slot="{ active }">
@@ -72,7 +81,7 @@
                     @click.stop="setRole('assistant')"
                   >
                     <ChatBubbleOvalLeftIcon class="mr-2 h-5 w-5" />
-                    Assistant
+                    {{ store.t('promptCard.role.assistant') }}
                   </button>
                 </MenuItem>
               </div>
@@ -122,7 +131,7 @@
                     @click.stop="store.movePromptTop(prompt.id)"
                   >
                     <ArrowUpCircleIcon class="mr-2 h-5 w-5 text-blue-400" />
-                    Move to Top
+                    {{ store.t('promptCard.moveToTop') }}
                   </button>
                 </MenuItem>
                 <MenuItem v-slot="{ active }">
@@ -134,7 +143,7 @@
                     @click.stop="store.movePromptBottom(prompt.id)"
                   >
                     <ArrowDownCircleIcon class="mr-2 h-5 w-5 text-blue-400" />
-                    Move to Bottom
+                    {{ store.t('promptCard.moveToBottom') }}
                   </button>
                 </MenuItem>
               </div>
@@ -148,7 +157,7 @@
                     @click.stop="store.duplicatePrompt(prompt.id)"
                   >
                     <DocumentDuplicateIcon class="mr-2 h-5 w-5 text-green-400" />
-                    Duplicate
+                    {{ store.t('promptCard.duplicate') }}
                   </button>
                 </MenuItem>
                 <MenuItem v-slot="{ active }">
@@ -160,7 +169,7 @@
                     @click.stop="hidePrompt"
                   >
                     <EyeSlashIcon class="mr-2 h-5 w-5 text-yellow-400" aria-hidden="true" />
-                    Hide
+                    {{ store.t('promptCard.hide') }}
                   </button>
                 </MenuItem>
               </div>
@@ -184,7 +193,7 @@
                       ]"
                       aria-hidden="true"
                     />
-                    Delete
+                    {{ store.t('promptCard.delete') }}
                   </button>
                 </MenuItem>
               </div>
@@ -194,7 +203,11 @@
       </div>
     </div>
     <!-- Text -->
-    <div class="px-8 text-sm whitespace-pre-wrap" :class="{ 'text-gray-600': !isEnabled }">
+    <div 
+      v-show="!finalCollapsedState"
+      class="px-8 text-sm whitespace-pre-wrap" 
+      :class="{ 'text-gray-600': !isEnabled }"
+    >
       <template v-for="(part, index) in contentParts" :key="index">
         <MacroRenderer
           v-if="part.isMacro"
@@ -208,22 +221,23 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { Menu, MenuButton, MenuItem, MenuItems, Switch } from '@headlessui/vue';
+import {
+    ArrowDownCircleIcon,
+    ArrowUpCircleIcon,
+    Bars3Icon,
+    ChatBubbleOvalLeftIcon,
+    ChevronDownIcon,
+    Cog6ToothIcon,
+    DocumentDuplicateIcon,
+    EllipsisVerticalIcon,
+    EyeSlashIcon,
+    TrashIcon,
+    UserIcon,
+} from '@heroicons/vue/20/solid';
+import { computed, ref } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import MacroRenderer from './MacroRenderer.vue';
-import { Switch, Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import {
-  Bars3Icon,
-  EllipsisVerticalIcon,
-  EyeSlashIcon,
-  TrashIcon,
-  UserIcon,
-  Cog6ToothIcon,
-  ChatBubbleOvalLeftIcon,
-  DocumentDuplicateIcon,
-  ArrowUpCircleIcon,
-  ArrowDownCircleIcon,
-} from '@heroicons/vue/20/solid';
 
 const props = defineProps({
   /** @type {import('vue').PropType<import('../../stores/presetStore').PartialPrompt>} */
@@ -234,6 +248,23 @@ const props = defineProps({
 });
 
 const store = usePresetStore();
+
+// 折叠状态管理
+const isCollapsed = ref(false);
+
+// 监听全局折叠状态
+const globalCollapseState = computed(() => store.globalCollapseState);
+
+// 计算最终的折叠状态
+const finalCollapsedState = computed(() => {
+  if (globalCollapseState.value === 'collapsed') {
+    return true;
+  } else if (globalCollapseState.value === 'expanded') {
+    return false;
+  }
+  // 如果是 'mixed' 状态，使用本地状态
+  return isCollapsed.value;
+});
 
 const isSelected = computed(() => store.selectedPromptId === props.prompt.id);
 
@@ -322,11 +353,21 @@ const hidePrompt = () => {
 
 const removePrompt = () => {
   if (props.prompt.system_prompt) {
-    alert('This is a system prompt and cannot be deleted.');
+    alert(store.t('promptCard.systemPromptCannotDelete'));
     return;
   }
-  if (window.confirm(`Are you sure you want to permanently delete "${props.prompt.name}"?`)) {
+  if (window.confirm(store.t('promptCard.deleteConfirm', { name: props.prompt.name }))) {
     store.removePrompt(props.prompt.id);
   }
+};
+
+// 切换折叠状态
+const toggleCollapse = () => {
+  // 如果全局状态是 'collapsed' 或 'expanded'，先重置为 'mixed'
+  if (store.globalCollapseState !== 'mixed') {
+    store.globalCollapseState = 'mixed';
+  }
+  // 切换本地状态
+  isCollapsed.value = !isCollapsed.value;
 };
 </script>

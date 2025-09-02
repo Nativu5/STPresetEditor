@@ -1,7 +1,7 @@
 <template>
   <div v-if="prompt" class="space-y-4">
     <div>
-      <label for="prompt-name" class="block text-sm font-medium text-gray-700">Name</label>
+      <label for="prompt-name" class="block text-sm font-medium text-gray-700">{{ store.t('promptDetails.name') }}</label>
       <input
         id="prompt-name"
         type="text"
@@ -11,7 +11,7 @@
       />
     </div>
     <div>
-      <label for="prompt-id" class="block text-sm font-medium text-gray-700">Identifier</label>
+      <label for="prompt-id" class="block text-sm font-medium text-gray-700">{{ store.t('promptDetails.identifier') }}</label>
       <input
         id="prompt-id"
         type="text"
@@ -21,7 +21,7 @@
       />
     </div>
     <div>
-      <label for="prompt-content" class="block text-sm font-medium text-gray-700">Content</label>
+      <label for="prompt-content" class="block text-sm font-medium text-gray-700">{{ store.t('promptDetails.content') }}</label>
       <textarea
         id="prompt-content"
         :value="prompt.content"
