@@ -1,83 +1,82 @@
-# SillyTavern Preset Editor
+---
+title: 开发指引
+description: 本文档作为开发者指引，指导开发流程和架构设计。
+---
 
-<div>
-    <img src="https://img.shields.io/badge/Vue-3.x-brightgreen.svg" alt="Vue 3">
-    <img src="https://img.shields.io/badge/TailwindCSS-4.x-blue.svg" alt="Tailwind CSS">
-    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License">
-</div>
+# 项目概览
 
-A lightweight, user-friendly web editor for managing SillyTavern `preset.json` files efficiently, powered by Vue.js and Tailwind CSS.
+本项目是一个用于编辑和管理 SillyTavern `preset.json` 文件的纯前端在线工具，旨在为复杂 Prompt 工程提供一个现代化、可视化的集成开发环境（IDE）。
 
-**🌐 Try it online:** [https://stpe.nativus.workers.dev/](https://stpe.nativus.workers.dev/)
+## 核心设计
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https%3A%2F%2Fgithub.com%2FNativu5%2FSTPresetEditor)
+- **技术栈**: Vue 3 (Composition API), Vite, Pinia, Tailwind CSS
+- **状态驱动**: 严格遵循 Pinia 作为单一可信源的单向数据流架构。所有操作通过 Actions 提交，驱动 State 变化，UI 通过 Getters 响应式更新。核心数据自动持久化，用户体验无缝。
+- **组件化**: 界面被拆分为高内聚、低耦合的 Vue 组件，职责清晰。
 
-## 🖼 Overview
+## 核心功能
 
-The default SillyTavern preset editor offers basic functionality but can be slow and lacks advanced editing features (e.g., macro highlighting, variable management).
+- **可视化编辑**: 用户可通过拖拽卡片直观地对 `prompt_order` 进行排序、启用/禁用、隐藏和删除。新建或从库中添加 Prompt 时，会自动插入到当前选中的 Prompt 下方，保持编辑流程的连贯性。若无选中项，则插入到列表顶部。
+- **角色与校验**:
+  - **角色设置**: 在 Prompt 卡片上，用户可通过一个带图标的下拉菜单，轻松设置其在 LLM 上下文中的角色 (`system`, `user`, `assistant`)。
+  - **安全校验**: 为防止意外操作，系统内置的 Prompt (`system_prompt: true`) 将禁止删除；由系统管理的 Prompt (`marker: true`) 将锁定其内容，不允许编辑。
+- **智能宏系统**: 自动扫描 `prompt_order` 中的所有宏，提供强大的 IDE 功能。
+- **变量管理**: 在侧边栏提供统一的变量管理视图，支持安全重命名。
+- **文件操作**: 支持 JSON 的导入、导出和一键重置。
+- **响应式设计**: 桌面端采用专业的三栏式布局，移动端则自动切换为单视图聚焦模式，通过侧滑抽屉和下拉菜单确保核心功能完整、易用。
 
-This project enhances your editing experience with an intuitive, high-performance and powerful UI/UX.
+## 代码规范
 
-<table>
-  <tr>
-    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
-      <img src="https://github.com/user-attachments/assets/24a8cbf7-932a-4dba-9852-64752fbc406c" alt="Main Editor" height="200" />
-      <br>Prompt Manage & Edit
-    </td>
-    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
-      <img src="https://github.com/user-attachments/assets/86f3ca7b-0a86-4dc7-9ee3-0045fc4544d8" alt="Macro Analysis" height="200" />
-      <br>Macro Analysis & Preview
-    </td>
-    <td align="center" style="border: 1px solid #ddd; padding: 8px;">
-      <img src="https://github.com/user-attachments/assets/4a2c883c-710e-40aa-9cce-f3be7770e5ad" alt="Variable Manager" height="200" />
-      <br>Variable Tools
-    </td>
-  </tr>
-</table>
-
-## 🎯 Key Features
-
-- ⚡ **Real-time Editing & Saving**: Instantly edit prompts with batch selection and drag-and-drop. Changes are saved locally for secure, persistent editing.
-- 🧩 **Syntax Highlighting**: Automatically highlight special macros within prompts, enabling quick reference.
-- 🔍 **Macro Analysis & Preview**: Instantly analyze macros and switch between raw and preview modes for efficient editing.
-- 📊 **Variable Management**: Efficiently rename and track variable usage across all prompts.
-
-## 🚀 Getting Started
-
-1. 📥 **Import**: Load your existing `preset.json` file via the import modal.
-2. ✏️ **Edit**: Visually manage, modify, and rearrange prompts effortlessly.
-3. 🧩 **Analyze**: Track macros and variables, viewing their usage across prompts.
-4. 📤 **Export**: Save and export your updated JSON file for use with SillyTavern.
-
-## 🚧 Development
-
-Run the development server with hot-reloading:
-
-```bash
-npm install
-npm run dev
-```
-
-Access the app at [http://localhost:5173](http://localhost:5173) (default port).
-
-## 🚢 Deployment
-
-Build for production:
-
-```bash
-npm run build
-```
-
-Deploy the contents of the generated `dist` folder to any static hosting provider (e.g., GitHub Pages, Netlify, Vercel).
-
-## 📄 License
-
-MIT License. See [LICENSE](LICENSE) for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request if you encounter any bugs or have feature suggestions.
+- **代码风格**: 遵循 Vue 3 官方推荐的 Composition API 风格，使用 `<script setup>` 语法糖。
+- **工具链**: 必须使用 ESLint 和 Prettier 进行代码质量和格式化检查，确保代码一致性。
 
 ---
 
-Developed by 🤖 using Vue.js and Tailwind CSS.
+# 持久化与自动保存
+
+用户所有编辑内容会自动实时保存到浏览器本地，无需手动操作。本项目使用 pinia-plugin-persistedstate，将部分状态信息持久化到浏览器的 `localStorage`。应用启动时会自动恢复上次编辑状态，保证数据安全和连续性。仅核心业务数据（如 prompts、顺序、原始 JSON、宏显示模式）会被持久化，其他的分析结果和 UI 状态均为动态计算。
+
+---
+
+# 宏系统核心 (`Macro System`)
+
+宏系统是本编辑器的核心。它将 `preset.json` 中的 `{{...}}` 文本转化为结构化的数据和可交互的 UI，极大地降低了复杂 Prompt 的维护成本。
+
+### 分析引擎 (`analyzeAllMacros`)
+
+分析引擎是宏系统的大脑，其实现在 `presetStore.js` 中。它遵循一个核心原则：**分析范围严格限定于 `prompt_order` 序列**。任何被“隐藏”（即不在 `prompt_order` 中）的 Prompt 都会被忽略。
+
+引擎通过一个高效的多阶段流程，完成对所有相关宏的解析、分析和状态模拟：
+
+1.  **解析 (Parsing)**: 将 `prompt_order` 中所有 Prompt 的宏文本，解析为标准化的 `macroData` 对象，并附加到对应的 Prompt 数据上。
+2.  **模拟与分析 (Simulation & Analysis)**: 在一个统一的循环中，遍历所有解析出的宏，同时完成两项任务：
+    - **静态分析**: 建立一个包含所有 `setvar`/`getvar` 定义与引用的关系图，并记录其所在 Prompt 的 `enabled` 状态。
+    - **运行时模拟**: 计算每个 `getvar` 宏在当前执行顺序下的实时值。此模拟会智能地处理 `enabled` 状态：`getvar` 总能看到它之前的变量定义，但只有来自 `enabled: true` 的 Prompt 中的 `setvar` 才能真正改变模拟中的变量值。
+3.  **聚合 (Aggregation)**: 将分析和模拟的结果提交到 Pinia store，驱动整个 UI 更新。
+
+### `macroData` 对象结构
+
+这是系统中宏的标准化表示，其字段如下：
+
+| 字段      | 类型             | 描述                                                         |
+| :-------- | :--------------- | :----------------------------------------------------------- |
+| `id`      | `string`         | 宏实例的唯一 ID，由 `promptId` 和其在内容中的起始位置构成。  |
+| `full`    | `string`         | 完整的宏文本，例如 `{{setvar::x::10}}`。                     |
+| `type`    | `string`         | 解析后的宏类型，如 `setvar`, `getvar`, `comment`, `random`。 |
+| `varName` | `string \| null` | 宏关联的变量名（如果适用）。                                 |
+| `value`   | `string \| null` | `setvar` 宏所设定的值。                                      |
+| `params`  | `string[]`       | 其他类型宏的参数列表，例如 `random` 宏的选项。               |
+
+### 渲染模式
+
+编辑器提供两种宏的显示模式，以适应不同的使用场景：
+
+- **原始模式 (Raw Mode)**: 默认视图。所有宏，如 `{{getvar::x}}`，都以其原始代码形式高亮显示。此模式用于编辑和查看宏结构。
+- **预览模式 (Preview Mode)**: `getvar` 宏会被直接替换为其在当前执行顺序下的真实值（例如 `1200`），并以特殊样式高亮，方便用户预览最终输出。在此模式下，`setvar` 和注释宏会被隐藏，以提供一个更干净的阅读视图。
+
+### 主要宏类型
+
+- **`{{setvar::变量名::值}}`**: 定义或修改一个变量。
+- **`{{getvar::变量名}}`**: 引用一个变量的值。
+- **`{{//...}}`**: 注释，在编辑器中显示为灰色，会被 AI 忽略。
+- **`{{random::...}}`**, **`{{roll ...}}`**: 随机宏，会以特殊颜色高亮。
+- **`{{user}}`**, **`{{char}}`**, etc.: 内置变量，会以特殊颜色高亮。
