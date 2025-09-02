@@ -1,0 +1,242 @@
+{
+    "en": {
+        "app": {
+            "title": "📝 SillyTavern Preset Editor",
+            "titleMobile": "📝 STPE"
+        },
+        "toolbar": {
+            "import": "Import",
+            "export": "Export",
+            "reset": "Reset",
+            "importFromJson": "Import from JSON",
+            "exportToJson": "Export to JSON",
+            "resetToDefault": "Reset to Default"
+        },
+        "importModal": {
+            "title": "Import JSON File",
+            "description": "Select a JSON file or paste content into the text area below.",
+            "dragText": "Drag JSON file here, or",
+            "clickToSelect": "click to select file",
+            "supportedFormat": "Supports .json file format",
+            "or": "or",
+            "pasteContent": "Paste JSON content",
+            "placeholder": "{\n  \"prompts\": [...],\n  \"prompt_order\": [...]\n}",
+            "cancel": "Cancel",
+            "import": "Import Preset",
+            "invalidFile": "Please select a valid JSON file",
+            "invalidDrop": "Please drag a valid JSON file",
+            "invalidContent": "File content is not in valid JSON format"
+        },
+        "exportModal": {
+            "title": "Export JSON File",
+            "description": "Export your current preset configuration as a JSON file.",
+            "filename": "Filename",
+            "download": "Download",
+            "cancel": "Cancel",
+            "copy": "Copy to Clipboard",
+            "copied": "Copied!",
+            "copyFailed": "Failed to copy",
+            "downloaded": "Downloaded!",
+            "downloadFailed": "Failed to download",
+            "autoGenerate": "Auto Generate",
+            "filenameHint": "Based on original filename with date suffix. You can customize the filename."
+        },
+        "reset": {
+            "confirm": "Are you sure you want to reset all data and return to the factory default? This will permanently delete all your changes and cannot be undone."
+        },
+        "delete": {
+            "confirm": "Are you sure you want to permanently delete {count} selected prompt(s)?"
+        },
+        "editor": {
+            "title": "Editor",
+            "collapseAll": "Collapse All",
+            "expandAll": "Expand All",
+            "previewMode": "Preview Mode",
+            "rawMode": "Raw Mode",
+            "searchPlaceholder": "Search prompts in editor..."
+        },
+        "promptCard": {
+            "delete": "Delete",
+            "deleteConfirm": "Are you sure you want to permanently delete \"{name}\"?",
+            "systemPromptCannotDelete": "This is a system prompt and cannot be deleted.",
+            "newUntitledPrompt": "New Untitled Prompt",
+            "copied": "Copied",
+            "newPromptContent": "This is a new prompt. Add your content here.",
+            "moveToTop": "Move to Top",
+            "moveToBottom": "Move to Bottom",
+            "duplicate": "Duplicate",
+            "hide": "Hide",
+            "roleLabel": "Role",
+            "role": {
+                "system": "System",
+                "user": "User",
+                "assistant": "Assistant"
+            }
+        },
+        "promptLibrary": {
+            "title": "Prompt Library",
+            "newPrompt": "New Prompt",
+            "multiSelect": "Multi-select",
+            "deleteSelected": "Delete Selected",
+            "searchPlaceholder": "Search by name or ID..."
+        },
+        "promptLibraryItem": {
+            "addToEditor": "Add prompt to editor",
+            "removeFromEditor": "Remove prompt from editor"
+        },
+        "variableManager": {
+            "invalidVariableName": "Invalid or conflicting new variable name."
+        },
+        "rightSidebar": {
+            "details": "Details",
+            "variables": "Variables",
+            "selectPromptOrMacro": "Select a prompt or a macro to see details here."
+        },
+        "variableManager": {
+            "invalidVariableName": "Invalid or conflicting new variable name.",
+            "variableList": "Variable List",
+            "definedButNeverReferenced": "Defined but never referenced",
+            "referencedButNeverDefined": "Referenced but never defined",
+            "renameVariable": "Rename Variable",
+            "variableToRename": "Variable to Rename",
+            "selectVariable": "Select a variable...",
+            "nothingFound": "Nothing found.",
+            "newName": "New Name",
+            "enterNewName": "Enter new name...",
+            "rename": "Rename"
+        },
+        "promptDetails": {
+            "name": "Name",
+            "identifier": "Identifier",
+            "content": "Content"
+        },
+        "macroDetails": {
+            "variable": "Variable",
+            "definedIn": "Defined In",
+            "notDefinedAnywhere": "This variable is not defined anywhere.",
+            "referencedIn": "Referenced In",
+            "notReferencedByAnyPrompt": "Not referenced by any other prompt.",
+            "unknownPrompt": "Unknown Prompt"
+        }
+    },
+    "zh": {
+        "app": {
+            "title": "📝 SillyTavern 预设编辑器",
+            "titleMobile": "📝 STPE"
+        },
+        "toolbar": {
+            "import": "导入",
+            "export": "导出",
+            "reset": "重置",
+            "importFromJson": "从JSON导入",
+            "exportToJson": "导出为JSON",
+            "resetToDefault": "重置为默认"
+        },
+        "importModal": {
+            "title": "导入JSON文件",
+            "description": "选择JSON文件或粘贴内容到下方文本区域。",
+            "dragText": "拖拽JSON文件到这里，或",
+            "clickToSelect": "点击选择文件",
+            "supportedFormat": "支持 .json 文件格式",
+            "or": "或",
+            "pasteContent": "粘贴JSON内容",
+            "placeholder": "{\n  \"prompts\": [...],\n  \"prompt_order\": [...]\n}",
+            "cancel": "取消",
+            "import": "导入预设",
+            "invalidFile": "请选择有效的JSON文件",
+            "invalidDrop": "请拖拽有效的JSON文件",
+            "invalidContent": "文件内容不是有效的JSON格式"
+        },
+        "exportModal": {
+            "title": "导出JSON文件",
+            "description": "将您当前的预设配置导出为JSON文件。",
+            "filename": "文件名",
+            "download": "下载",
+            "cancel": "取消",
+            "copy": "复制到剪贴板",
+            "copied": "已复制！",
+            "copyFailed": "复制失败",
+            "downloaded": "已下载！",
+            "downloadFailed": "下载失败",
+            "autoGenerate": "自动生成",
+            "filenameHint": "基于原始文件名自动生成，包含日期后缀。您可以自定义文件名。"
+        },
+        "reset": {
+            "confirm": "您确定要重置所有数据并恢复到出厂默认设置吗？这将永久删除您的所有更改且无法撤销。"
+        },
+        "delete": {
+            "confirm": "您确定要永久删除选中的 {count} 个提示吗？"
+        },
+        "editor": {
+            "title": "编辑器",
+            "collapseAll": "全部折叠",
+            "expandAll": "全部展开",
+            "previewMode": "预览模式",
+            "rawMode": "原始模式",
+            "searchPlaceholder": "在编辑器中搜索提示..."
+        },
+        "promptCard": {
+            "delete": "删除",
+            "deleteConfirm": "您确定要永久删除 \"{name}\" 吗？",
+            "systemPromptCannotDelete": "这是系统提示，无法删除。",
+            "newUntitledPrompt": "新建未命名提示",
+            "copied": "已复制",
+            "newPromptContent": "这是一个新提示。请在此处添加您的内容。",
+            "moveToTop": "移至顶部",
+            "moveToBottom": "移至底部",
+            "duplicate": "复制",
+            "hide": "隐藏",
+            "roleLabel": "角色",
+            "role": {
+                "system": "系统",
+                "user": "用户",
+                "assistant": "助手"
+            }
+        },
+        "promptLibrary": {
+            "title": "提示库",
+            "newPrompt": "新建提示",
+            "multiSelect": "多选",
+            "deleteSelected": "删除选中项",
+            "searchPlaceholder": "按名称或ID搜索..."
+        },
+        "promptLibraryItem": {
+            "addToEditor": "添加到编辑器",
+            "removeFromEditor": "从编辑器移除"
+        },
+        "variableManager": {
+            "invalidVariableName": "无效或冲突的新变量名。"
+        },
+        "rightSidebar": {
+            "details": "详情",
+            "variables": "变量",
+            "selectPromptOrMacro": "选择一个提示或宏来查看详情。"
+        },
+        "variableManager": {
+            "invalidVariableName": "无效或冲突的新变量名。",
+            "variableList": "变量列表",
+            "definedButNeverReferenced": "已定义但从未引用",
+            "referencedButNeverDefined": "已引用但从未定义",
+            "renameVariable": "重命名变量",
+            "variableToRename": "要重命名的变量",
+            "selectVariable": "选择一个变量...",
+            "nothingFound": "未找到任何内容。",
+            "newName": "新名称",
+            "enterNewName": "输入新名称...",
+            "rename": "重命名"
+        },
+        "promptDetails": {
+            "name": "名称",
+            "identifier": "标识符",
+            "content": "内容"
+        },
+        "macroDetails": {
+            "variable": "变量",
+            "definedIn": "定义于",
+            "notDefinedAnywhere": "此变量未在任何地方定义。",
+            "referencedIn": "引用于",
+            "notReferencedByAnyPrompt": "未被任何其他提示引用。",
+            "unknownPrompt": "未知提示"
+        }
+    }
+}
