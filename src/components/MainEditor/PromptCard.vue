@@ -1,16 +1,36 @@
 <template>
+  <!-- Main prompt card container with conditional styling -->
   <div
+    :data-id="prompt.id"
     class="relative mx-1 my-2 rounded-lg border p-4 shadow-md transition-shadow duration-200"
     :class="[
       isSelected ? 'border-blue-500 ring-2 ring-blue-500/50' : 'border-gray-200',
       !isEnabled ? 'bg-gray-100' : 'bg-white',
+      isDragging ? 'opacity-50 scale-105 shadow-lg' : '',
+      dragOver ? 'border-blue-400 ring-2 ring-blue-400/30' : '',
     ]"
     @click="selectPrompt"
+    draggable="true"
+    @dragstart="onDragStart"
+    @dragend="onDragEnd"
+    @dragover="onDragOver"
+    @dragleave="onDragLeave"
+    @drop="onDrop"
   >
     <!-- Header: Title and Actions -->
     <div class="mb-2 flex items-center justify-between">
       <div class="flex items-center">
-        <Bars3Icon class="mr-3 h-5 w-5 cursor-grab text-gray-400 active:cursor-grabbing" />
+        <!-- Multi-select checkbox (only show when multi-select is active) -->
+        <div v-if="store.isEditorMultiSelectActive" class="mr-3" @click.stop>
+          <input
+            type="checkbox"
+            :checked="isSelectedForBatch"
+            :disabled="prompt.system_prompt"
+            @change="toggleBatchSelection"
+            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+        </div>
+        <!-- Collapse toggle button with prompt title -->
         <button
           @click.stop="toggleCollapse"
           class="flex items-center hover:bg-gray-100 rounded p-1 transition-colors"
@@ -19,7 +39,11 @@
             class="mr-2 h-4 w-4 text-gray-500 transition-transform duration-200"
             :class="{ 'rotate-[-90deg]': finalCollapsedState }"
           />
-          <h3 class="text-base font-bold" :class="{ 'text-gray-500': !isEnabled }">
+          <h3 
+            class="text-base font-bold truncate" 
+            :class="{ 'text-gray-500': !isEnabled }"
+            :title="prompt.name"
+          >
             {{ prompt.name }}
           </h3>
         </button>
@@ -89,17 +113,33 @@
           </transition>
         </Menu>
 
-        <div @click.stop>
-          <Switch
-            v-model="isEnabled"
-            :class="isEnabled ? 'bg-blue-600' : 'bg-gray-300'"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+        <div class="flex items-center space-x-2">
+          <div @click.stop>
+            <Switch
+              v-model="isEnabled"
+              :class="isEnabled ? 'bg-blue-600' : 'bg-gray-300'"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+            >
+              <span
+                :class="isEnabled ? 'translate-x-6' : 'translate-x-1'"
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+              />
+            </Switch>
+          </div>
+          <!-- Delete button -->
+          <button
+            @click.stop="removePrompt"
+            :disabled="prompt.system_prompt"
+            class="inline-flex items-center justify-center rounded-md p-1.5 text-sm font-medium transition-colors"
+            :class="[
+              prompt.system_prompt
+                ? 'cursor-not-allowed text-gray-300'
+                : 'text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1'
+            ]"
+            :title="prompt.system_prompt ? store.t('promptCard.systemPromptCannotDelete') : store.t('promptCard.delete')"
           >
-            <span
-              :class="isEnabled ? 'translate-x-6' : 'translate-x-1'"
-              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-            />
-          </Switch>
+            <TrashIcon class="h-4 w-4" />
+          </button>
         </div>
         <Menu as="div" class="relative inline-block text-left">
           <div>
@@ -173,30 +213,6 @@
                   </button>
                 </MenuItem>
               </div>
-              <div class="px-1 py-1">
-                <MenuItem v-slot="{ active }">
-                  <button
-                    :class="[
-                      'group flex w-full items-center rounded-md px-2 py-2 text-sm',
-                      prompt.system_prompt
-                        ? 'cursor-not-allowed text-gray-400'
-                        : active
-                          ? 'bg-red-500 text-white'
-                          : 'text-gray-900',
-                    ]"
-                    @click.stop="removePrompt"
-                  >
-                    <TrashIcon
-                      :class="[
-                        'mr-2 h-5 w-5',
-                        prompt.system_prompt ? 'text-gray-300' : 'text-red-400',
-                      ]"
-                      aria-hidden="true"
-                    />
-                    {{ store.t('promptCard.delete') }}
-                  </button>
-                </MenuItem>
-              </div>
             </MenuItems>
           </transition>
         </Menu>
@@ -225,7 +241,6 @@ import { Menu, MenuButton, MenuItem, MenuItems, Switch } from '@headlessui/vue';
 import {
     ArrowDownCircleIcon,
     ArrowUpCircleIcon,
-    Bars3Icon,
     ChatBubbleOvalLeftIcon,
     ChevronDownIcon,
     Cog6ToothIcon,
@@ -239,6 +254,7 @@ import { computed, ref } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import MacroRenderer from './MacroRenderer.vue';
 
+// Define component props
 const props = defineProps({
   /** @type {import('vue').PropType<import('../../stores/presetStore').PartialPrompt>} */
   prompt: {
@@ -247,27 +263,25 @@ const props = defineProps({
   },
 });
 
+// Initialize the preset store
 const store = usePresetStore();
 
-// 折叠状态管理
-const isCollapsed = ref(false);
+// Drag and drop state
+const isDragging = ref(false);
+const dragOver = ref(false);
 
-// 监听全局折叠状态
-const globalCollapseState = computed(() => store.globalCollapseState);
-
-// 计算最终的折叠状态
+// Compute final collapsed state using store's centralized logic
 const finalCollapsedState = computed(() => {
-  if (globalCollapseState.value === 'collapsed') {
-    return true;
-  } else if (globalCollapseState.value === 'expanded') {
-    return false;
-  }
-  // 如果是 'mixed' 状态，使用本地状态
-  return isCollapsed.value;
+  return store.getPromptCollapseState(props.prompt.id);
 });
 
+// Check if this prompt is currently selected
 const isSelected = computed(() => store.selectedPromptId === props.prompt.id);
 
+// Check if this prompt is selected for batch operations
+const isSelectedForBatch = computed(() => store.selectedEditorPrompts.includes(props.prompt.id));
+
+// Two-way binding for prompt enabled state
 const isEnabled = computed({
   get() {
     return props.prompt.enabled !== false;
@@ -277,16 +291,23 @@ const isEnabled = computed({
   },
 });
 
+// Get current prompt role with fallback to 'system'
 const currentRole = computed(() => props.prompt.role || 'system');
 
+// Icon mapping for different prompt roles
 const roleIcons = {
   system: Cog6ToothIcon,
   user: UserIcon,
   assistant: ChatBubbleOvalLeftIcon,
 };
 
+// Get the appropriate icon for the current role
 const RoleIcon = computed(() => roleIcons[currentRole.value]);
 
+/**
+ * Update the prompt role
+ * @param {string} newRole - The new role to set
+ */
 const setRole = (newRole) => {
   store.updatePromptDetail({
     promptId: props.prompt.id,
@@ -344,7 +365,14 @@ const contentParts = computed(() => {
 });
 
 const selectPrompt = () => {
+  // Clicking the card selects it (does not toggle batch checkbox)
   store.selectPrompt(props.prompt.id);
+  // Sync left library scroll position
+  store.navigateLibraryToPrompt(props.prompt.id);
+};
+
+const toggleBatchSelection = () => {
+  store.toggleEditorSelection(props.prompt.id);
 };
 
 const hidePrompt = () => {
@@ -356,18 +384,87 @@ const removePrompt = () => {
     alert(store.t('promptCard.systemPromptCannotDelete'));
     return;
   }
-  if (window.confirm(store.t('promptCard.deleteConfirm', { name: props.prompt.name }))) {
+  
+  // If skipping confirmation is enabled, delete immediately
+  if (store.skipDeleteConfirmation) {
+    store.removePrompt(props.prompt.id);
+    return;
+  }
+  
+  // Show a confirmation dialog, then optionally "do not ask again"
+  const message = `${store.t('promptCard.deleteConfirm', { name: props.prompt.name })}\n\n${store.t('promptCard.deleteConfirmNote')}`;
+  const result = window.confirm(message);
+  
+  if (result) {
+    // Ask whether to set skip confirmation for next time
+    const skipConfirm = window.confirm(store.t('promptCard.skipDeleteConfirmation'));
+    if (skipConfirm) {
+      store.setSkipDeleteConfirmation(true);
+    }
     store.removePrompt(props.prompt.id);
   }
 };
 
-// 切换折叠状态
+// Toggle collapsed state; state management is centralized in the store
 const toggleCollapse = () => {
-  // 如果全局状态是 'collapsed' 或 'expanded'，先重置为 'mixed'
-  if (store.globalCollapseState !== 'mixed') {
-    store.globalCollapseState = 'mixed';
+  store.togglePromptCollapse(props.prompt.id);
+};
+
+// Drag-and-drop event handlers
+const onDragStart = (event) => {
+  isDragging.value = true;
+  event.dataTransfer.setData('text/plain', props.prompt.id);
+  event.dataTransfer.effectAllowed = 'move';
+  
+  // Apply dragging cursor style
+  event.target.style.cursor = 'grabbing';
+};
+
+const onDragEnd = (event) => {
+  isDragging.value = false;
+  dragOver.value = false;
+  event.target.style.cursor = 'grab';
+};
+
+const onDragOver = (event) => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  dragOver.value = true;
+};
+
+const onDragLeave = (event) => {
+  // Clear dragOver only when leaving the entire element
+  if (!event.currentTarget.contains(event.relatedTarget)) {
+    dragOver.value = false;
   }
-  // 切换本地状态
-  isCollapsed.value = !isCollapsed.value;
+};
+
+const onDrop = (event) => {
+  event.preventDefault();
+  dragOver.value = false;
+  
+  const draggedPromptId = event.dataTransfer.getData('text/plain');
+  const source = (() => {
+    try {
+      return event.dataTransfer.getData('application/x-stpe-source');
+    } catch (e) {
+      return '';
+    }
+  })();
+  const targetPromptId = props.prompt.id;
+  
+  // No-op when dragging onto the same element
+  if (draggedPromptId === targetPromptId) {
+    return;
+  }
+  
+  // Choose behavior based on drag source
+  if (source === 'library') {
+    // Insert from the left library after the target prompt
+    store.insertPromptAfter(draggedPromptId, targetPromptId);
+  } else {
+    // Reorder within the editor list
+    store.movePromptAfter(draggedPromptId, targetPromptId);
+  }
 };
 </script>

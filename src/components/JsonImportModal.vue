@@ -54,7 +54,7 @@ function readFileContent(file) {
   reader.onload = (e) => {
     try {
       const content = e.target.result;
-      // 验证JSON格式
+      // Validate JSON format before accepting content
       JSON.parse(content);
       jsonInput.value = content;
       currentFilename.value = file.name;
@@ -112,7 +112,7 @@ function triggerFileInput() {
                 </p>
               </div>
 
-              <!-- 文件选择区域 -->
+              <!-- File selection area -->
               <div class="mt-4">
                 <div
                   :class="[
@@ -143,7 +143,7 @@ function triggerFileInput() {
                   </div>
                 </div>
                 
-                <!-- 隐藏的文件输入 -->
+                <!-- Hidden file input -->
                 <input
                   ref="fileInput"
                   type="file"
@@ -153,21 +153,21 @@ function triggerFileInput() {
                 />
               </div>
 
-              <!-- 分隔线 -->
+              <!-- Separator line -->
               <div class="mt-6 flex items-center">
                 <div class="flex-1 border-t border-gray-300"></div>
                 <span class="px-3 text-sm text-gray-500">{{ store.t('importModal.or') }}</span>
                 <div class="flex-1 border-t border-gray-300"></div>
               </div>
 
-              <!-- 文本输入区域 -->
+              <!-- Text input area -->
               <div class="mt-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   {{ store.t('importModal.pasteContent') }}
                 </label>
                 <textarea
                   v-model="jsonInput"
-                  class="h-64 w-full rounded-md border border-gray-300 p-3 font-mono text-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  class="h-32 w-full rounded-md border border-gray-300 p-3 font-mono text-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   :placeholder="store.t('importModal.placeholder')"
                 />
               </div>

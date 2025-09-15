@@ -11,16 +11,16 @@ const copyButtonText = ref('');
 const downloadButtonText = ref('');
 const exportFilename = ref('');
 
-// 初始化导出文件名
+// Initialize export filename
 function initializeExportFilename() {
   exportFilename.value = store.generateExportFilename();
 }
 
-// 监听模态框打开状态，自动初始化文件名
+// When modal opens, initialize filename and button labels
 watch(() => store.isExportModalOpen, (isOpen) => {
   if (isOpen) {
     initializeExportFilename();
-    // 初始化按钮文本
+    // Initialize button labels
     copyButtonText.value = store.t('exportModal.copy');
     downloadButtonText.value = store.t('exportModal.download');
   }
@@ -104,7 +104,7 @@ function downloadJsonFile() {
                 </p>
               </div>
 
-              <!-- 文件名输入区域 -->
+              <!-- Filename input section -->
               <div class="mt-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
                   {{ store.t('exportModal.filename') }}
