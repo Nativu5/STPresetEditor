@@ -1,16 +1,15 @@
 <script setup>
-import { watchEffect } from 'vue';
-import { useBreakpoints } from '@vueuse/core';
-import { usePresetStore } from '../stores/presetStore';
 import {
-  Dialog,
-  DialogPanel,
-  TransitionRoot,
-  TransitionChild,
-  DialogOverlay,
+    Dialog,
+    DialogPanel,
+    TransitionChild,
+    TransitionRoot,
 } from '@headlessui/vue';
-import { Splitpanes, Pane } from 'splitpanes';
+import { useBreakpoints } from '@vueuse/core';
+import { Pane, Splitpanes } from 'splitpanes';
 import 'splitpanes/dist/splitpanes.css';
+import { watchEffect } from 'vue';
+import { usePresetStore } from '../stores/presetStore';
 
 // Use VueUse to detect screen size based on Tailwind's breakpoints
 const breakpoints = useBreakpoints({
@@ -42,7 +41,7 @@ watchEffect(() => {
         </div>
       </pane>
       <pane :size="30" min-size="20">
-        <div class="h-full overflow-auto bg-gray-50 p-4">
+        <div class="h-full overflow-auto bg-gray-50 p-4 relative">
           <slot name="right" />
         </div>
       </pane>
@@ -68,7 +67,7 @@ watchEffect(() => {
           leave-from="opacity-100"
           leave-to="opacity-0"
         >
-          <DialogOverlay class="fixed inset-0 bg-black/30" />
+          <div class="fixed inset-0 bg-black/30" />
         </TransitionChild>
         <TransitionChild
           as="template"
@@ -98,7 +97,7 @@ watchEffect(() => {
           leave-from="opacity-100"
           leave-to="opacity-0"
         >
-          <DialogOverlay class="fixed inset-0 bg-black/30" />
+          <div class="fixed inset-0 bg-black/30" />
         </TransitionChild>
         <TransitionChild
           as="template"
@@ -120,7 +119,6 @@ watchEffect(() => {
 
 <style>
 @reference "tailwindcss";
-
 .splitpanes.default-theme .splitpanes__splitter {
   @apply bg-gray-200 transition-colors duration-200 ease-in-out;
   width: 6px;

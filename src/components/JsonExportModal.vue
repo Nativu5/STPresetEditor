@@ -1,24 +1,63 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
+import { ArrowDownTrayIcon, ArrowUpTrayIcon, CheckIcon, ClipboardDocumentIcon } from '@heroicons/vue/24/outline';
+import { computed, ref, watch } from 'vue';
 import { usePresetStore } from '../stores/presetStore';
-import { TransitionRoot, TransitionChild, Dialog, DialogPanel, DialogTitle } from '@headlessui/vue';
-import { ArrowUpTrayIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/vue/24/outline';
 
 const store = usePresetStore();
 
 const finalJson = computed(() => store.finalJson);
-const copyButtonText = ref('Copy to Clipboard');
+const copyButtonText = ref('');
+const downloadButtonText = ref('');
+const exportFilename = ref('');
+
+// Initialize export filename
+function initializeExportFilename() {
+  exportFilename.value = store.generateExportFilename();
+}
+
+// When modal opens, initialize filename and button labels
+watch(() => store.isExportModalOpen, (isOpen) => {
+  if (isOpen) {
+    initializeExportFilename();
+    // Initialize button labels
+    copyButtonText.value = store.t('exportModal.copy');
+    downloadButtonText.value = store.t('exportModal.download');
+  }
+});
 
 async function copyToClipboard() {
   try {
     await navigator.clipboard.writeText(finalJson.value);
-    copyButtonText.value = 'Copied!';
+    copyButtonText.value = store.t('exportModal.copied');
     window.setTimeout(() => {
-      copyButtonText.value = 'Copy to Clipboard';
+      copyButtonText.value = store.t('exportModal.copy');
     }, 2000);
   } catch (err) {
     console.error('Failed to copy: ', err);
-    copyButtonText.value = 'Failed to copy';
+    copyButtonText.value = store.t('exportModal.copyFailed');
+  }
+}
+
+function downloadJsonFile() {
+  try {
+    const blob = new Blob([finalJson.value], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = exportFilename.value || 'preset.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    downloadButtonText.value = store.t('exportModal.downloaded');
+    window.setTimeout(() => {
+      downloadButtonText.value = store.t('exportModal.download');
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to download: ', err);
+    downloadButtonText.value = store.t('exportModal.downloadFailed');
   }
 }
 </script>
@@ -57,11 +96,36 @@ async function copyToClipboard() {
                 class="flex items-center text-lg leading-6 font-medium text-gray-900"
               >
                 <ArrowUpTrayIcon class="mr-2 h-6 w-6 text-green-600" />
-                Export to JSON
+                {{ store.t('exportModal.title') }}
               </DialogTitle>
               <div class="mt-2">
                 <p class="text-sm text-gray-500">
-                  The generated JSON below reflects all your changes. Use the button to copy it.
+                  {{ store.t('exportModal.description') }}
+                </p>
+              </div>
+
+              <!-- Filename input section -->
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  {{ store.t('exportModal.filename') }}
+                </label>
+                <div class="flex space-x-2">
+                  <input
+                    v-model="exportFilename"
+                    type="text"
+                    class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    placeholder="preset.json"
+                  />
+                  <button
+                    type="button"
+                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    @click="initializeExportFilename"
+                  >
+                    {{ store.t('exportModal.autoGenerate') }}
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">
+                  {{ store.t('exportModal.filenameHint') }}
                 </p>
               </div>
 
@@ -79,7 +143,15 @@ async function copyToClipboard() {
                   class="inline-flex justify-center rounded-md border border-transparent bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                   @click="store.closeExportModal"
                 >
-                  Close
+                  {{ store.t('exportModal.cancel') }}
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  @click="downloadJsonFile"
+                >
+                  <ArrowDownTrayIcon class="mr-2 h-5 w-5" />
+                  {{ downloadButtonText }}
                 </button>
                 <button
                   type="button"
@@ -87,7 +159,7 @@ async function copyToClipboard() {
                   @click="copyToClipboard"
                 >
                   <ClipboardDocumentIcon
-                    v-if="copyButtonText === 'Copy to Clipboard'"
+                    v-if="copyButtonText === store.t('exportModal.copy')"
                     class="mr-2 h-5 w-5"
                   />
                   <CheckIcon v-else class="mr-2 h-5 w-5" />
