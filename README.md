@@ -70,6 +70,15 @@ npm run build
 
 Deploy the contents of the generated `dist` folder to any static hosting provider (e.g., GitHub Pages, Netlify, Vercel).
 
+### 🪟 Windows Quick Start
+
+Use the bundled batch script to automate the local setup:
+
+1. Ensure Node.js and npm are available in your environment.
+2. Double-click `launch-stpreseteditor.bat` (or run it from Command Prompt) inside the project directory.
+3. The script installs dependencies when needed and starts the Vite development server.
+4. Open [http://localhost:5173](http://localhost:5173) in your browser, and press `Ctrl+C` in the terminal to stop the server when finished.
+
 ## 📄 License
 
 MIT License. See [LICENSE](LICENSE) for details.
