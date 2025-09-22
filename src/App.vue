@@ -1,17 +1,21 @@
 <script setup>
 import { onMounted } from 'vue';
-import { usePresetStore } from './stores/presetStore';
 import presetData from './assets/example.json';
-import AppToolbar from './components/AppToolbar.vue';
 import AppLayout from './components/AppLayout.vue';
-import EditorView from './components/MainEditor/EditorView.vue';
-import LeftSidebar from './components/LeftSidebar/PromptLibrary.vue';
-import RightSidebar from './components/RightSidebar/RightSidebar.vue';
-import JsonImportModal from './components/JsonImportModal.vue';
+import AppToolbar from './components/AppToolbar.vue';
 import JsonExportModal from './components/JsonExportModal.vue';
+import JsonImportModal from './components/JsonImportModal.vue';
+import LeftSidebar from './components/LeftSidebar/PromptLibrary.vue';
+import EditorView from './components/MainEditor/EditorView.vue';
+import PresetManagerModal from './components/PresetManagerModal.vue';
+import RightSidebar from './components/RightSidebar/RightSidebar.vue';
+import SettingsModal from './components/SettingsModal.vue';
+import { usePresetStore } from './stores/presetStore';
 
+// Initialize the preset store
 const store = usePresetStore();
 
+// Initialize the application with default data if no persisted data exists
 onMounted(() => {
   // Check if we have persisted data, if not, load the default example
   if (!store.rawJson) {
@@ -21,28 +25,36 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- Main application container with full height layout -->
   <div id="app-container" class="flex h-screen flex-col bg-gray-100 font-sans text-gray-800">
+    <!-- Application header with toolbar -->
     <header class="relative z-10 flex-shrink-0 bg-white p-2 shadow-md">
       <AppToolbar />
     </header>
 
+    <!-- Main layout with three sections: left sidebar, main editor, right sidebar -->
     <AppLayout class="flex-grow overflow-hidden">
+      <!-- Left sidebar: Prompt library for browsing and managing prompts -->
       <template #left>
         <LeftSidebar />
       </template>
 
+      <!-- Main editor: Central area for editing and organizing prompts -->
       <template #main>
         <EditorView />
       </template>
 
+      <!-- Right sidebar: Details view and variable management -->
       <template #right>
         <RightSidebar />
       </template>
     </AppLayout>
 
-    <!-- Modals remain at the root -->
+    <!-- Global modals for import/export functionality -->
     <JsonImportModal />
     <JsonExportModal />
+    <PresetManagerModal :is-open="store.isPresetManagerOpen" />
+    <SettingsModal :is-open="store.isSettingsModalOpen" />
   </div>
 </template>
 

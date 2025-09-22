@@ -14,12 +14,17 @@ import languageData from '../assets/languages.json';
 
 /**
  * @typedef {Object} PartialPrompt
- * @property {string} id
- * @property {string} [content]
- * @property {MacroData[]} [macros]
+ * @property {string} id - Unique identifier for the prompt
+ * @property {string} [content] - The text content of the prompt
+ * @property {MacroData[]} [macros] - Array of parsed macros found in the content
  */
 
-// --- Helper function to create a debounced action ---
+/**
+ * Helper function to create a debounced action wrapper
+ * @param {Function} action - The function to debounce
+ * @param {number} delay - Delay in milliseconds
+ * @returns {Function} Debounced function
+ */
 function debouncedAction(action, delay) {
   const debounced = debounce(action, delay);
   return function (...args) {
@@ -27,71 +32,140 @@ function debouncedAction(action, delay) {
   };
 }
 
+/**
+ * Main Pinia store for managing preset data and application state
+ * Handles prompt management, macro analysis, variable tracking, and UI state
+ */
 export const usePresetStore = defineStore('preset', {
   state: () => ({
-    rawJson: '',
-    originalFilename: '', // 存储导入的原始文件名
-    prompts: {},
-    promptOrder: [],
-    selectedPromptId: null,
-    selectedMacro: null,
+    // Core data properties
+    rawJson: '', // Raw JSON string of the imported preset
+    originalFilename: '', // Original filename of the imported preset
+    prompts: {}, // Object containing all prompts keyed by ID
+    promptOrder: [], // Array of prompt IDs in execution order
+    selectedPromptId: null, // Currently selected prompt ID
+    selectedMacro: null, // Currently selected macro for details view
     viewOptions: {
-      renderMacros: true,
+      renderMacros: true, // Whether to render macros in the UI
     },
-    variables: {},
-    unresolvedVariables: [],
-    macroStateSnapshots: {}, // New: Stores the value of each getvar at its execution point
-    isMultiSelectActive: false,
-    selectedLibraryPrompts: new Set(),
-    librarySearchTerm: '',
-    editorSearchTerm: '',
-    scrollToPromptId: null,
-    activeRightSidebarTab: 'details', // 'details' or 'variables'
-    macroDisplayMode: 'raw', // 'raw' or 'preview'
 
-    // UI State for mobile layout
-    isLeftSidebarOpen: false,
-    isRightSidebarOpen: false,
+    // Variable management
+    variables: {}, // Object containing variable definitions and references
+    unresolvedVariables: [], // Array of variables that are referenced but not defined
+    macroStateSnapshots: {}, // Stores the value of each getvar at its execution point
+
+    // Multi-selection state
+    isMultiSelectActive: false, // Whether multi-selection mode is active
+    selectedLibraryPrompts: [], // Array of selected prompt IDs in library view
+
+    // Editor multi-selection state
+    isEditorMultiSelectActive: true, // Whether editor multi-selection mode is active (default ON)
+    selectedEditorPrompts: [], // Array of selected prompt IDs in editor view
+
+    // Search functionality
+    librarySearchTerm: '', // Search term for the prompt library
+    editorSearchTerm: '', // Search term for the main editor
+    scrollToPromptId: null, // ID of prompt to scroll to (for navigation)
+    scrollToLibraryPromptId: null, // ID of prompt to scroll to in the left library
+
+    // UI state
+    activeRightSidebarTab: 'details', // Active tab in right sidebar: 'details' or 'variables'
+    macroDisplayMode: 'raw', // Macro display mode: 'raw' or 'preview'
+
+    // Mobile layout state
+    isLeftSidebarOpen: false, // Whether left sidebar is open on mobile
+    isRightSidebarOpen: false, // Whether right sidebar is open on mobile
 
     // Modal visibility state
-    isImportModalOpen: false,
-    isExportModalOpen: false,
+    isImportModalOpen: false, // Whether import modal is visible
+    isExportModalOpen: false, // Whether export modal is visible
+    isDetailsModalOpen: false, // Whether details modal is visible
+    isSettingsModalOpen: false, // Whether settings modal is visible
+    isBatchReplaceModalOpen: false, // Whether batch replace modal is visible
 
     // Responsive state
-    isMobile: false,
+    isMobile: false, // Whether the app is in mobile view
 
-    // Global collapse state
-    globalCollapseState: 'expanded', // 'expanded', 'collapsed', or 'mixed'
+    // Collapse state management
+    globalCollapseState: 'expanded', // Global collapse state: 'expanded', 'collapsed', or 'mixed'
+    promptCollapseStates: {}, // Individual prompt collapse states: { promptId: boolean }
 
-    // Language state
-    currentLanguage: 'en', // 'en' or 'zh'
+    // Internationalization
+    currentLanguage: 'en', // Current language: 'en' or 'zh'
+
+    // User preferences
+    skipDeleteConfirmation: false, // Whether to skip delete confirmation dialog
+
+    // Preset management
+    savedPresets: {}, // Object containing saved presets: { presetId: { name, data, createdAt, updatedAt } }
+    currentPresetId: null, // ID of currently loaded preset
+    isPresetManagerOpen: false, // Whether preset manager modal is open
+    defaultPresetId: null, // ID of the default preset (factory settings)
+
+    // Preset manager UI state
+    presetSearchTerm: '', // Search term for preset manager
+    presetSortBy: 'updated', // Sort by: 'name', 'created', 'updated'
+    presetMultiSelectActive: false, // Whether multi-select mode is active
+    selectedPresets: new Set(), // Set of selected preset IDs
+    // Batch replace history for undo
+    batchReplaceHistory: [], // Array<{ timestamp, changes: Array<{ promptId, before: { name, content }, after: { name, content } }> }>
+    batchReplaceRedoStack: [], // Redo stack storing same shape as history entries
   }),
   getters: {
+    /**
+     * Get a prompt by its ID
+     * @param {Object} state - The store state
+     * @returns {Function} Function that takes an ID and returns the prompt
+     */
     getPromptById: (state) => (id) => {
       return state.prompts[id];
     },
+
+    /**
+     * Check if a prompt is in the current order
+     * @param {Object} state - The store state
+     * @returns {Function} Function that takes a prompt ID and returns boolean
+     */
     isPromptInOrder: (state) => (promptId) => {
       return state.promptOrder.includes(promptId);
     },
+
+    /**
+     * Get all defined variable names sorted alphabetically
+     * @param {Object} state - The store state
+     * @returns {string[]} Array of variable names
+     */
     definedVariables: (state) => {
       return Object.keys(state.variables).sort();
     },
+
+    /**
+     * Get prompts in execution order with search filtering
+     * @param {Object} state - The store state
+     * @returns {Object[]} Array of prompts in order, filtered by search term
+     */
     orderedPrompts: (state) => {
       const prompts = state.promptOrder
         .map((id) => (state.prompts[id] ? { ...state.prompts[id], id } : null))
         .filter((p) => p !== null);
 
-      // 如果Editor搜索词为空，返回所有prompts
+      // If no search term, return all prompts
       if (!state.editorSearchTerm) {
         return prompts;
       }
 
-      // 根据搜索词过滤prompts
+      // Filter prompts by search term (name or ID)
       const searchTerm = state.editorSearchTerm.toLowerCase();
       return prompts.filter(
         (p) => p.name.toLowerCase().includes(searchTerm) || p.id.toLowerCase().includes(searchTerm),
       );
     },
+
+    /**
+     * Get all prompts for library view with search filtering
+     * @param {Object} state - The store state
+     * @returns {Object[]} Array of all prompts sorted by name, filtered by search term
+     */
     libraryPrompts: (state) => {
       const allPrompts = Object.values(state.prompts).sort((a, b) => a.name.localeCompare(b.name));
       if (!state.librarySearchTerm) {
@@ -102,10 +176,15 @@ export const usePresetStore = defineStore('preset', {
         (p) => p.name.toLowerCase().includes(searchTerm) || p.id.toLowerCase().includes(searchTerm),
       );
     },
+    /**
+     * Generate the final JSON for export based on current editor state
+     * @param {Object} state - The store state
+     * @returns {string} JSON string ready for export
+     */
     finalJson: (state) => {
       const preset = JSON.parse(state.rawJson || '{}');
 
-      // Create a clean version of prompts for export, removing any internal-use properties.
+      // Create a clean version of prompts for export, removing internal-use properties
       const cleanedPrompts = Object.values(state.prompts).map((p) => {
         // eslint-disable-next-line no-unused-vars
         const { macros, ...rest } = p;
@@ -114,23 +193,23 @@ export const usePresetStore = defineStore('preset', {
 
       preset.prompts = cleanedPrompts;
 
-      // 基于编辑器当前状态重新生成prompt_order
-      // 只包含在编辑器中的prompts（promptOrder中的项目）
+      // Regenerate prompt_order based on current editor state
+      // Only include prompts that are in the editor (promptOrder array)
       const editorPrompts = state.promptOrder
         .map((id) => ({
           identifier: id,
           enabled: state.prompts[id]?.enabled !== false,
         }))
-        .filter((item) => state.prompts[item.identifier]); // 确保prompt存在
+        .filter((item) => state.prompts[item.identifier]); // Ensure prompt exists
 
-      // 创建或更新prompt_order配置
+      // Create or update prompt_order configuration
       if (Array.isArray(preset.prompt_order)) {
-        // 优先更新 character_id: 100001 的排序
+        // Prioritize updating character_id: 100001 order
         let characterOrderIndex = preset.prompt_order.findIndex(
           (item) => item.character_id === 100001,
         );
 
-        // 如果没有找到 100001，则使用第一个可用的
+        // If 100001 not found, use the first available
         if (characterOrderIndex === -1 && preset.prompt_order.length > 0) {
           characterOrderIndex = 0;
         }
@@ -138,14 +217,14 @@ export const usePresetStore = defineStore('preset', {
         if (characterOrderIndex !== -1) {
           preset.prompt_order[characterOrderIndex].order = editorPrompts;
         } else {
-          // 如果没有找到任何可用的排序配置，创建新的
+          // If no available order configuration found, create new one
           preset.prompt_order.push({
             character_id: 100001,
             order: editorPrompts,
           });
         }
       } else {
-        // 如果没有 prompt_order，创建一个默认的
+        // If no prompt_order exists, create a default one
         preset.prompt_order = [
           {
             character_id: 100001,
@@ -156,19 +235,104 @@ export const usePresetStore = defineStore('preset', {
 
       return JSON.stringify(preset, null, 2);
     },
+    /**
+     * Get variable statistics for the variable manager
+     * @param {Object} state - The store state
+     * @returns {Object} Object containing undefined and unreferenced variable counts
+     */
     variableStats: (state) => {
-      // Calculate the number of variables that are defined but never referenced.
+      // Calculate the number of variables that are defined but never referenced
       const unreferencedCount = Object.values(state.variables).filter(
         (v) => v.definedIn.length > 0 && v.referencedIn.length === 0,
       ).length;
 
       return {
-        // The count of variables that are referenced but never defined.
+        // The count of variables that are referenced but never defined
         undefinedCount: state.unresolvedVariables.length,
         unreferencedCount: unreferencedCount,
       };
     },
-    // Language getter
+
+    /**
+     * Get all saved presets as an array with search and sort filtering
+     * @param {Object} state - The store state
+     * @returns {Object[]} Array of saved presets
+     */
+    savedPresetsList: (state) => {
+      let presets = Object.entries(state.savedPresets).map(([id, preset]) => ({ id, ...preset }));
+
+      // Apply search filter
+      if (state.presetSearchTerm) {
+        const searchTerm = state.presetSearchTerm.toLowerCase();
+        presets = presets.filter((preset) => preset.name.toLowerCase().includes(searchTerm));
+      }
+
+      // Apply sorting
+      switch (state.presetSortBy) {
+        case 'name':
+          presets.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case 'created':
+          presets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          break;
+        case 'updated':
+        default:
+          presets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+          break;
+      }
+
+      return presets;
+    },
+
+    // --- Helpers for reactive multi-select rendering ---
+    isPresetSelected: (state) => (presetId) => {
+      const sel = state.selectedPresets;
+      if (!sel) return false;
+      if (sel instanceof Set) return sel.has(presetId);
+      if (Array.isArray(sel)) return sel.includes(presetId);
+      if (typeof sel === 'object') return Boolean(sel[presetId]);
+      return false;
+    },
+    selectedPresetsCount: (state) => {
+      const sel = state.selectedPresets;
+      if (!sel) return 0;
+      if (sel instanceof Set) return sel.size;
+      if (Array.isArray(sel)) return sel.length;
+      if (typeof sel === 'object') return Object.keys(sel).length;
+      return 0;
+    },
+
+    /**
+     * Get current preset name
+     * @param {Object} state - The store state
+     * @returns {string|null} Current preset name or null
+     */
+    currentPresetName: (state) => {
+      if (!state.currentPresetId || !state.savedPresets[state.currentPresetId]) {
+        return null;
+      }
+      return state.savedPresets[state.currentPresetId].name;
+    },
+
+    /**
+     * Get current file name for preset naming
+     * @param {Object} state - The store state
+     * @returns {string} Current file name or default name
+     */
+    getCurrentPresetName: (state) => {
+      if (state.originalFilename) {
+        // Remove file extension
+        return state.originalFilename.replace(/\.[^/.]+$/, '');
+      }
+      // Return default name directly to avoid calling other getters
+      return 'Untitled Preset';
+    },
+
+    /**
+     * Translation function for internationalization
+     * @param {Object} state - The store state
+     * @returns {Function} Function that takes a key and optional parameters and returns translated text
+     */
     t:
       (state) =>
       (key, params = {}) => {
@@ -186,15 +350,32 @@ export const usePresetStore = defineStore('preset', {
         }
         return result;
       },
+    /** Whether there is a batch replace operation to undo */
+    canUndoBatchReplace: (state) => {
+      return (state.batchReplaceHistory?.length || 0) > 0;
+    },
+    canRedoBatchReplace: (state) => {
+      return (state.batchReplaceRedoStack?.length || 0) > 0;
+    },
   },
   actions: {
     // --- Initialization and Core Logic ---
+
+    /**
+     * Initialize the store with default data when no persisted data exists
+     * @param {string} jsonString - JSON string of the default preset data
+     */
     initializeDefaultData(jsonString) {
       // This is called only when no persisted data exists
       console.log('[Persistence] No persisted data found, loading default example.json');
       this.parseFromJson(jsonString);
     },
 
+    /**
+     * Import new JSON data from user
+     * @param {string} jsonString - JSON string to import
+     * @param {string} filename - Original filename of the imported data
+     */
     importNewJson(jsonString, filename = '') {
       // This is called when user imports new JSON
       // It will automatically be persisted by the plugin
@@ -202,22 +383,26 @@ export const usePresetStore = defineStore('preset', {
       this.originalFilename = filename;
       this.parseFromJson(jsonString);
     },
+    /**
+     * Parse JSON data and populate the store
+     * @param {string} jsonString - JSON string to parse
+     */
     parseFromJson(jsonString) {
       try {
         this.rawJson = jsonString;
         const parsed = JSON.parse(jsonString);
         const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
 
-        // 构建 prompts 对象
+        // Build prompts object from array
         this.prompts = promptsArray.reduce((acc, prompt) => {
           const id = prompt.identifier || prompt.name;
           if (id) acc[id] = { ...prompt, id };
           return acc;
         }, {});
 
-        // 处理 prompt_order 排序
+        // Process prompt_order sorting
         if (Array.isArray(parsed.prompt_order)) {
-          // 优先使用 character_id: 100001 的排序，如果没有则使用第一个可用的
+          // Prioritize character_id: 100001 order, fallback to first available
           let characterOrder = parsed.prompt_order.find((item) => item.character_id === 100001);
           if (!characterOrder && parsed.prompt_order.length > 0) {
             characterOrder = parsed.prompt_order[0];
@@ -226,24 +411,24 @@ export const usePresetStore = defineStore('preset', {
           if (characterOrder && Array.isArray(characterOrder.order)) {
             const orderData = characterOrder.order;
 
-            // 按照 prompt_order 中的顺序构建 promptOrder 数组
+            // Build promptOrder array based on prompt_order sequence
             this.promptOrder = orderData
               .map((item) => item.identifier)
               .filter((id) => id in this.prompts);
 
-            // 设置每个 prompt 的 enabled 状态
+            // Set enabled state for each prompt
             orderData.forEach((item) => {
               if (this.prompts[item.identifier]) {
                 this.prompts[item.identifier].enabled = item.enabled;
               }
             });
 
-            // 添加不在 prompt_order 中但存在于 prompts 中的项目
+            // Add prompts that exist but are not in prompt_order
             const orderedIds = new Set(this.promptOrder);
             const unorderedPrompts = Object.values(this.prompts)
               .filter((p) => !orderedIds.has(p.id))
               .sort((a, b) => {
-                // 按 injection_order 排序，然后按 system_prompt 排序，最后按名称排序
+                // Sort by injection_order, then system_prompt, then name
                 const orderA = a.injection_order || 0;
                 const orderB = b.injection_order || 0;
                 if (orderA !== orderB) return orderA - orderB;
@@ -251,10 +436,10 @@ export const usePresetStore = defineStore('preset', {
                 return (a.name || '').localeCompare(b.name || '');
               });
 
-            // 将未排序的项目添加到末尾
+            // Add unordered prompts to the end
             this.promptOrder.push(...unorderedPrompts.map((p) => p.id));
           } else {
-            // 如果没有有效的 prompt_order，使用默认排序
+            // If no valid prompt_order, use default sorting
             this.promptOrder = promptsArray
               .filter((p) => p.enabled !== false)
               .sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0))
@@ -262,7 +447,7 @@ export const usePresetStore = defineStore('preset', {
               .filter(Boolean);
           }
         } else {
-          // 如果没有 prompt_order，使用默认排序
+          // If no prompt_order exists, use default sorting
           this.promptOrder = promptsArray
             .filter((p) => p.enabled !== false)
             .sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0))
@@ -278,14 +463,80 @@ export const usePresetStore = defineStore('preset', {
       }
     },
 
-    resetToFactoryDefault() {
-      // Clear the persisted state and reload the page
-      console.log('[Persistence] Clearing localStorage and resetting to factory default');
-      localStorage.removeItem('preset');
-      window.location.reload();
+    /**
+     * Reset the application to factory default settings
+     * Only resets current editing content, preserves saved presets
+     */
+    async resetToFactoryDefault() {
+      console.log(
+        '[resetToFactoryDefault] Resetting to factory default while preserving saved presets...',
+      );
+
+      // Preserve currently saved presets
+      const savedPresets = this.savedPresets;
+      const defaultPresetId = this.defaultPresetId;
+
+      try {
+        // Load factory settings data
+        const factoryData = await import('../assets/example.json');
+
+        // Parse factory settings JSON
+        const jsonString = JSON.stringify(factoryData.default || factoryData);
+        const parsed = JSON.parse(jsonString);
+        const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+
+        // Build prompts object
+        const prompts = promptsArray.reduce((acc, prompt) => {
+          const id = prompt.identifier || prompt.name;
+          if (id) acc[id] = { ...prompt, id };
+          return acc;
+        }, {});
+
+        // Build promptOrder array
+        let promptOrder = [];
+        if (Array.isArray(parsed.prompt_order)) {
+          let characterOrder = parsed.prompt_order.find((item) => item.character_id === 100001);
+          if (!characterOrder && parsed.prompt_order.length > 0) {
+            characterOrder = parsed.prompt_order[0];
+          }
+
+          if (characterOrder && Array.isArray(characterOrder.order)) {
+            promptOrder = characterOrder.order
+              .map((item) => item.identifier)
+              .filter((id) => id in prompts);
+          }
+        }
+
+        // Reset editor content to factory settings
+        this.rawJson = jsonString;
+        this.originalFilename = 'factory-default.json';
+        this.prompts = prompts;
+        this.promptOrder = promptOrder;
+        this.macroDisplayMode = 'raw';
+        this.promptCollapseStates = {};
+        this.currentPresetId = null;
+
+        // Restore user's saved presets metadata
+        this.savedPresets = savedPresets;
+        this.defaultPresetId = defaultPresetId;
+
+        // Re-analyze macros
+        this.analyzeAllMacros();
+
+        console.log(
+          '[resetToFactoryDefault] Reset to factory default completed, saved presets preserved',
+        );
+      } catch (error) {
+        console.error('[resetToFactoryDefault] Failed to load factory settings:', error);
+      }
     },
 
     // --- Unified Macro Analysis ---
+
+    /**
+     * Analyze all macros in the current prompt order
+     * This is the core function that parses macros, tracks variables, and simulates execution
+     */
     analyzeAllMacros() {
       console.log('[analyzeAllMacros] Starting analysis macros...');
 
@@ -442,6 +693,59 @@ export const usePresetStore = defineStore('preset', {
         this.analyzeAllMacros();
       }
     },
+    movePromptAfter(draggedPromptId, targetPromptId) {
+      const draggedIndex = this.promptOrder.indexOf(draggedPromptId);
+      const targetIndex = this.promptOrder.indexOf(targetPromptId);
+
+      if (draggedIndex === -1 || targetIndex === -1) {
+        console.warn('[movePromptAfter] Invalid prompt IDs:', { draggedPromptId, targetPromptId });
+        return;
+      }
+
+      // If the dragged item is before the target, adjust insert index
+      const insertIndex = draggedIndex < targetIndex ? targetIndex : targetIndex + 1;
+
+      // Remove dragged item
+      this.promptOrder.splice(draggedIndex, 1);
+
+      // Insert at target position
+      this.promptOrder.splice(insertIndex, 0, draggedPromptId);
+
+      this.analyzeAllMacros();
+    },
+    insertPromptAfter(draggedPromptId, targetPromptId) {
+      // Validate existence
+      const draggedExists = Boolean(this.prompts[draggedPromptId]);
+      const targetExists = Boolean(this.prompts[targetPromptId]);
+      if (!draggedExists || !targetExists) {
+        console.warn('[insertPromptAfter] Invalid prompt IDs:', {
+          draggedPromptId,
+          targetPromptId,
+        });
+        return;
+      }
+
+      // If dragged item already in order, use move logic
+      const draggedIndex = this.promptOrder.indexOf(draggedPromptId);
+      const targetIndex = this.promptOrder.indexOf(targetPromptId);
+
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        this.movePromptAfter(draggedPromptId, targetPromptId);
+        return;
+      }
+
+      // Only insert if target is present in order
+      if (targetIndex === -1) {
+        console.warn('[insertPromptAfter] Target not in order, append to end as fallback');
+        this.promptOrder.push(draggedPromptId);
+        this.analyzeAllMacros();
+        return;
+      }
+
+      const insertIndex = targetIndex + 1;
+      this.promptOrder.splice(insertIndex, 0, draggedPromptId);
+      this.analyzeAllMacros();
+    },
     duplicatePrompt(promptId) {
       const originalPrompt = this.prompts[promptId];
       if (!originalPrompt) return;
@@ -476,6 +780,8 @@ export const usePresetStore = defineStore('preset', {
     removePrompt(promptId) {
       delete this.prompts[promptId];
       this.hidePrompt(promptId); // This will trigger analysis
+      // Cleanup collapse state for removed prompt
+      this.cleanupPromptCollapseState(promptId);
     },
     togglePromptEnabled(promptId) {
       const prompt = this.prompts[promptId];
@@ -549,17 +855,13 @@ export const usePresetStore = defineStore('preset', {
       this.navigateToPrompt(newId);
     },
     deleteSelectedPrompts() {
-      if (this.selectedLibraryPrompts.size === 0) return;
-      if (
-        window.confirm(
-          this.t('delete.confirm').replace('{count}', this.selectedLibraryPrompts.size),
-        )
-      ) {
+      if (this.selectedLibraryPrompts.length === 0) return;
+      if (window.confirm(this.t('delete.confirm', { count: this.selectedLibraryPrompts.length }))) {
         this.selectedLibraryPrompts.forEach((promptId) => {
           delete this.prompts[promptId];
           this.promptOrder = this.promptOrder.filter((id) => id !== promptId);
         });
-        this.selectedLibraryPrompts.clear();
+        this.selectedLibraryPrompts = [];
         this.isMultiSelectActive = false;
         this.analyzeAllMacros();
       }
@@ -598,27 +900,119 @@ export const usePresetStore = defineStore('preset', {
     },
     toggleMultiSelect() {
       this.isMultiSelectActive = !this.isMultiSelectActive;
-      this.selectedLibraryPrompts.clear();
+      this.selectedLibraryPrompts = [];
     },
     toggleLibrarySelection(promptId) {
-      if (this.selectedLibraryPrompts.has(promptId)) {
-        this.selectedLibraryPrompts.delete(promptId);
+      const index = this.selectedLibraryPrompts.indexOf(promptId);
+      if (index > -1) {
+        this.selectedLibraryPrompts.splice(index, 1);
       } else {
-        this.selectedLibraryPrompts.add(promptId);
+        this.selectedLibraryPrompts.push(promptId);
       }
+    },
+
+    // Editor multi-selection methods
+    toggleEditorMultiSelect() {
+      // Deprecated: multi-select is always on. Keep method for backward compatibility.
+      this.isEditorMultiSelectActive = true;
+    },
+    toggleEditorSelection(promptId) {
+      const index = this.selectedEditorPrompts.indexOf(promptId);
+      if (index > -1) {
+        this.selectedEditorPrompts.splice(index, 1);
+      } else {
+        this.selectedEditorPrompts.push(promptId);
+      }
+    },
+    batchMoveSelectedToTop() {
+      if (this.selectedEditorPrompts.length === 0) return;
+
+      const selectedIds = [...this.selectedEditorPrompts];
+      const remainingIds = this.promptOrder.filter(
+        (id) => !this.selectedEditorPrompts.includes(id),
+      );
+
+      // Move selected prompts to the top
+      this.promptOrder = [...selectedIds, ...remainingIds];
+      this.analyzeAllMacros();
+    },
+    batchMoveSelectedToBottom() {
+      if (this.selectedEditorPrompts.length === 0) return;
+
+      const selectedIds = [...this.selectedEditorPrompts];
+      const remainingIds = this.promptOrder.filter(
+        (id) => !this.selectedEditorPrompts.includes(id),
+      );
+
+      // Move selected prompts to the bottom
+      this.promptOrder = [...remainingIds, ...selectedIds];
+      this.analyzeAllMacros();
+    },
+    batchDeleteSelected() {
+      if (this.selectedEditorPrompts.length === 0) return;
+
+      // Filter out system prompts that cannot be deleted
+      const deletablePrompts = Array.from(this.selectedEditorPrompts).filter((promptId) => {
+        const prompt = this.prompts[promptId];
+        return prompt && !prompt.system_prompt;
+      });
+
+      if (deletablePrompts.length === 0) {
+        alert(this.t('editor.noDeletablePrompts'));
+        return;
+      }
+
+      const selectedCount = deletablePrompts.length;
+      const message = this.t('editor.batchDeleteConfirm', { count: selectedCount });
+
+      if (window.confirm(message)) {
+        // Delete only deletable prompts
+        deletablePrompts.forEach((promptId) => {
+          delete this.prompts[promptId];
+        });
+
+        // Remove from prompt order
+        this.promptOrder = this.promptOrder.filter((id) => !deletablePrompts.includes(id));
+
+        // Clear selection but keep multi-select active
+        this.selectedEditorPrompts = [];
+
+        this.analyzeAllMacros();
+      }
+    },
+    // Editor selection helpers
+    selectAllEditorPrompts() {
+      this.selectedEditorPrompts = [...this.promptOrder];
+    },
+    deselectAllEditorPrompts() {
+      this.selectedEditorPrompts = [];
     },
     setLibrarySearch(term) {
       this.librarySearchTerm = term;
-      this.selectedLibraryPrompts.clear();
+      this.selectedLibraryPrompts = [];
     },
     setEditorSearch(term) {
       this.editorSearchTerm = term;
     },
     navigateToPrompt(promptId) {
+      // First, ensure the prompt is in the editor order
+      if (!this.isPromptInOrder(promptId)) {
+        console.log('[navigateToPrompt] Prompt not in editor, adding it first:', promptId);
+        this.addPromptToOrder(promptId);
+      }
+
+      // Then set the scroll request
       this.scrollToPromptId = promptId;
     },
     clearScrollToRequest() {
       this.scrollToPromptId = null;
+    },
+    navigateLibraryToPrompt(promptId) {
+      // Trigger left library scroll request
+      this.scrollToLibraryPromptId = promptId;
+    },
+    clearLibraryScrollToRequest() {
+      this.scrollToLibraryPromptId = null;
     },
     setActiveRightSidebarTab(tabName) {
       this.activeRightSidebarTab = tabName;
@@ -648,6 +1042,26 @@ export const usePresetStore = defineStore('preset', {
     closeExportModal() {
       this.isExportModalOpen = false;
     },
+    openDetailsModal() {
+      this.isDetailsModalOpen = true;
+    },
+    closeDetailsModal() {
+      this.isDetailsModalOpen = false;
+    },
+    openSettingsModal() {
+      this.isSettingsModalOpen = true;
+    },
+    closeSettingsModal() {
+      this.isSettingsModalOpen = false;
+    },
+
+    // Batch replace modal toggles
+    openBatchReplaceModal() {
+      this.isBatchReplaceModalOpen = true;
+    },
+    closeBatchReplaceModal() {
+      this.isBatchReplaceModalOpen = false;
+    },
 
     // Responsive state management
     setIsMobile(isMobile) {
@@ -657,22 +1071,85 @@ export const usePresetStore = defineStore('preset', {
     // Global collapse state management
     collapseAllPrompts() {
       this.globalCollapseState = 'collapsed';
+      // Clear per-prompt states so all follow the global state
+      this.promptCollapseStates = {};
     },
 
     expandAllPrompts() {
       this.globalCollapseState = 'expanded';
+      // Clear per-prompt states so all follow the global state
+      this.promptCollapseStates = {};
     },
 
-    // 生成导出文件名
+    setGlobalCollapseState(state) {
+      this.globalCollapseState = state;
+      // Clear per-prompt states when switching away from 'mixed'
+      if (state !== 'mixed') {
+        this.promptCollapseStates = {};
+      }
+    },
+
+    // Individual prompt collapse state management
+    togglePromptCollapse(promptId) {
+      // If global state is not 'mixed', initialize mixed state first
+      if (this.globalCollapseState !== 'mixed') {
+        this.initializeMixedState();
+      }
+      // Ensure this prompt has an individual state
+      this.ensurePromptCollapseState(promptId);
+      // Toggle collapse state for the prompt
+      this.promptCollapseStates[promptId] = !this.promptCollapseStates[promptId];
+    },
+
+    // Initialize 'mixed' state: seed per-prompt states from current global setting
+    initializeMixedState() {
+      const currentGlobalState = this.globalCollapseState;
+      this.globalCollapseState = 'mixed';
+
+      // Assign an individual collapse state to all prompts
+      this.promptOrder.forEach((id) => {
+        this.promptCollapseStates[id] = currentGlobalState === 'collapsed';
+      });
+    },
+
+    // Ensure given prompt has an individual state; derive from global if missing
+    ensurePromptCollapseState(promptId) {
+      if (this.promptCollapseStates[promptId] === undefined) {
+        // If global is 'mixed', default to expanded (false); otherwise mirror global
+        this.promptCollapseStates[promptId] = this.globalCollapseState === 'collapsed';
+      }
+    },
+
+    // Remove stale collapse state (when a prompt is deleted)
+    cleanupPromptCollapseState(promptId) {
+      if (this.promptCollapseStates[promptId] !== undefined) {
+        delete this.promptCollapseStates[promptId];
+      }
+    },
+
+    getPromptCollapseState(promptId) {
+      // If not 'mixed', return the global state directly
+      if (this.globalCollapseState === 'collapsed') {
+        return true;
+      } else if (this.globalCollapseState === 'expanded') {
+        return false;
+      }
+
+      // In 'mixed', ensure per-prompt state exists and return it
+      this.ensurePromptCollapseState(promptId);
+      return this.promptCollapseStates[promptId];
+    },
+
+    // Generate export filename
     generateExportFilename() {
       if (!this.originalFilename) {
         return 'preset.json';
       }
 
-      // 移除原始文件的扩展名
+      // Strip original file extension
       const nameWithoutExt = this.originalFilename.replace(/\.json$/i, '');
 
-      // 生成日期后缀 (YYYYMMDD)
+      // Build date suffix (YYYYMMDD)
       const now = new Date();
       const dateStr =
         now.getFullYear().toString() +
@@ -691,29 +1168,686 @@ export const usePresetStore = defineStore('preset', {
     toggleLanguage() {
       this.currentLanguage = this.currentLanguage === 'en' ? 'zh' : 'en';
     },
+
+    // Delete confirmation preferences
+    setSkipDeleteConfirmation(skip) {
+      this.skipDeleteConfirmation = skip;
+    },
+
+    // Preset management
+    openPresetManager() {
+      this.isPresetManagerOpen = true;
+    },
+    closePresetManager() {
+      this.isPresetManagerOpen = false;
+    },
+    /**
+     * Save imported JSON as a new preset without loading/overwriting current editor state
+     * @param {string} jsonString - The imported preset JSON string
+     * @param {string} filename - The original file name of the imported preset
+     * @returns {string|null} The newly created preset ID, or null on failure
+     */
+    saveImportedJsonAsPreset(jsonString, filename = '') {
+      try {
+        const parsed = JSON.parse(jsonString);
+        const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+
+        // Build prompts object
+        const prompts = promptsArray.reduce((acc, prompt) => {
+          const id = prompt.identifier || prompt.name;
+          if (id) acc[id] = { ...prompt, id };
+          return acc;
+        }, {});
+
+        // Build promptOrder array
+        let promptOrder = [];
+        if (Array.isArray(parsed.prompt_order)) {
+          let characterOrder = parsed.prompt_order.find((item) => item.character_id === 100001);
+          if (!characterOrder && parsed.prompt_order.length > 0) {
+            characterOrder = parsed.prompt_order[0];
+          }
+
+          if (characterOrder && Array.isArray(characterOrder.order)) {
+            promptOrder = characterOrder.order
+              .map((item) => item.identifier)
+              .filter((id) => id in prompts);
+          }
+        }
+
+        // Compose preset payload (do not touch current editor state)
+        const presetData = {
+          rawJson: jsonString,
+          originalFilename: filename || '',
+          prompts,
+          promptOrder,
+          macroDisplayMode: 'raw',
+          promptCollapseStates: {},
+        };
+
+        const presetId = window.crypto.randomUUID();
+        const now = new Date().toISOString();
+
+        // Derive preset name from filename, fallback to localized default
+        const presetName = filename
+          ? filename.replace(/\.[^/.]+$/, '')
+          : this.t('presetManager.defaultName');
+
+        this.savedPresets[presetId] = {
+          name: presetName,
+          data: presetData,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        return presetId;
+      } catch (error) {
+        console.error('[saveImportedJsonAsPreset] Failed to parse imported JSON:', error);
+        return null;
+      }
+    },
+    /**
+     * Import preset with duplicate name checking and overwrite confirmation, then auto-save.
+     * Does NOT load into current editor; only saves into savedPresets.
+     * @param {string} jsonString
+     * @param {string} filename
+     * @returns {{ result: 'saved'|'overwritten'|'failed', name?: string }}
+     */
+    importPresetWithDuplicateCheck(jsonString, filename = '') {
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonString);
+      } catch (e) {
+        console.error('[importPresetWithDuplicateCheck] Invalid JSON:', e);
+        return { result: 'failed' };
+      }
+
+      const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+      const prompts = promptsArray.reduce((acc, prompt) => {
+        const id = prompt.identifier || prompt.name;
+        if (id) acc[id] = { ...prompt, id };
+        return acc;
+      }, {});
+
+      let promptOrder = [];
+      if (Array.isArray(parsed.prompt_order)) {
+        let characterOrder = parsed.prompt_order.find((item) => item.character_id === 100001);
+        if (!characterOrder && parsed.prompt_order.length > 0) {
+          characterOrder = parsed.prompt_order[0];
+        }
+        if (characterOrder && Array.isArray(characterOrder.order)) {
+          promptOrder = characterOrder.order
+            .map((item) => item.identifier)
+            .filter((id) => id in prompts);
+        }
+      }
+
+      const presetData = {
+        rawJson: jsonString,
+        originalFilename: filename || '',
+        prompts,
+        promptOrder,
+        macroDisplayMode: 'raw',
+        promptCollapseStates: {},
+      };
+
+      const baseName = filename
+        ? filename.replace(/\.[^/.]+$/, '')
+        : this.t('presetManager.defaultName');
+
+      const findPresetIdByName = (name) => {
+        const entries = Object.entries(this.savedPresets || {});
+        for (const [id, preset] of entries) {
+          if (preset?.name === name) return id;
+        }
+        return null;
+      };
+
+      const now = new Date().toISOString();
+      const existingId = findPresetIdByName(baseName);
+
+      if (existingId) {
+        const confirmText = this.t('importModal.overwriteConfirm', { name: baseName });
+        if (window.confirm(confirmText)) {
+          this.savedPresets[existingId].data = presetData;
+          this.savedPresets[existingId].updatedAt = now;
+          return { result: 'overwritten', name: baseName };
+        }
+
+        // Generate a unique name like "Name (2)", "Name (3)"...
+        let index = 2;
+        let uniqueName = `${baseName} (${index})`;
+        while (findPresetIdByName(uniqueName)) {
+          index += 1;
+          uniqueName = `${baseName} (${index})`;
+        }
+
+        const newId = window.crypto.randomUUID();
+        this.savedPresets[newId] = {
+          name: uniqueName,
+          data: presetData,
+          createdAt: now,
+          updatedAt: now,
+        };
+        return { result: 'saved', name: uniqueName };
+      }
+
+      // No duplicate, save directly under baseName
+      const newId = window.crypto.randomUUID();
+      this.savedPresets[newId] = {
+        name: baseName,
+        data: presetData,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return { result: 'saved', name: baseName };
+    },
+    savePreset(name = null) {
+      console.log('[savePreset] Starting to save preset...');
+      const presetId = window.crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      // If no name provided, use current filename
+      // If no name provided, derive from current filename
+      let presetName;
+      if (name) {
+        presetName = name.trim();
+      } else {
+        // Inline getCurrentPresetName logic here
+        if (this.originalFilename) {
+          presetName = this.originalFilename.replace(/\.[^/.]+$/, '');
+        } else {
+          presetName = 'Untitled Preset';
+        }
+      }
+      console.log('[savePreset] Preset name:', presetName);
+
+      const presetData = {
+        rawJson: this.rawJson,
+        originalFilename: this.originalFilename,
+        prompts: this.prompts,
+        promptOrder: this.promptOrder,
+        macroDisplayMode: this.macroDisplayMode,
+        promptCollapseStates: this.promptCollapseStates,
+      };
+
+      this.savedPresets[presetId] = {
+        name: presetName,
+        data: presetData,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      this.currentPresetId = presetId;
+      console.log('[savePreset] Preset saved successfully. ID:', presetId);
+      console.log('[savePreset] Total saved presets:', Object.keys(this.savedPresets).length);
+      return presetId;
+    },
+    loadPreset(presetId) {
+      console.log('[loadPreset] Attempting to load preset:', presetId);
+      const preset = this.savedPresets[presetId];
+      if (!preset) {
+        console.log('[loadPreset] Preset not found:', presetId);
+        return false;
+      }
+
+      console.log('[loadPreset] Loading preset:', preset.name);
+      // Save current state before loading
+      this.rawJson = preset.data.rawJson;
+      this.originalFilename = preset.data.originalFilename;
+      this.prompts = preset.data.prompts;
+      this.promptOrder = preset.data.promptOrder;
+      this.macroDisplayMode = preset.data.macroDisplayMode;
+      this.promptCollapseStates = preset.data.promptCollapseStates || {};
+
+      this.currentPresetId = presetId;
+      this.analyzeAllMacros();
+      console.log('[loadPreset] Preset loaded successfully');
+      return true;
+    },
+    updatePreset(presetId, name) {
+      const preset = this.savedPresets[presetId];
+      if (!preset) return false;
+
+      preset.name = name.trim();
+      preset.updatedAt = new Date().toISOString();
+      return true;
+    },
+    deletePreset(presetId) {
+      if (this.savedPresets[presetId]) {
+        delete this.savedPresets[presetId];
+        if (this.currentPresetId === presetId) {
+          this.currentPresetId = null;
+        }
+        return true;
+      }
+      return false;
+    },
+    duplicatePreset(presetId, newName) {
+      const preset = this.savedPresets[presetId];
+      if (!preset) return false;
+
+      const newPresetId = window.crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      this.savedPresets[newPresetId] = {
+        name: newName.trim(),
+        data: JSON.parse(JSON.stringify(preset.data)), // Deep clone
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      return newPresetId;
+    },
+    async saveFactorySettingsAsDefault() {
+      console.log('[saveFactorySettingsAsDefault] Saving factory settings as default preset...');
+
+      try {
+        // Load factory settings data
+        const factoryData = await import('../assets/example.json');
+
+        const presetId = window.crypto.randomUUID();
+        const now = new Date().toISOString();
+
+        // Parse factory settings JSON
+        const jsonString = JSON.stringify(factoryData.default || factoryData);
+        const parsed = JSON.parse(jsonString);
+        const promptsArray = Array.isArray(parsed.prompts) ? parsed.prompts : [];
+
+        // Build prompts object
+        const prompts = promptsArray.reduce((acc, prompt) => {
+          const id = prompt.identifier || prompt.name;
+          if (id) acc[id] = { ...prompt, id };
+          return acc;
+        }, {});
+
+        // Build promptOrder array
+        let promptOrder = [];
+        if (Array.isArray(parsed.prompt_order)) {
+          let characterOrder = parsed.prompt_order.find((item) => item.character_id === 100001);
+          if (!characterOrder && parsed.prompt_order.length > 0) {
+            characterOrder = parsed.prompt_order[0];
+          }
+
+          if (characterOrder && Array.isArray(characterOrder.order)) {
+            promptOrder = characterOrder.order
+              .map((item) => item.identifier)
+              .filter((id) => id in prompts);
+          }
+        }
+
+        // Compose default preset payload
+        const presetData = {
+          rawJson: jsonString,
+          originalFilename: 'factory-default.json',
+          prompts: prompts,
+          promptOrder: promptOrder,
+          macroDisplayMode: 'raw',
+          promptCollapseStates: {},
+        };
+
+        // Save as default preset
+        this.savedPresets[presetId] = {
+          name: this.t('presetManager.factorySettings.factoryDefaultName'),
+          data: presetData,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        this.defaultPresetId = presetId;
+        console.log(
+          '[saveFactorySettingsAsDefault] Factory settings saved as default preset. ID:',
+          presetId,
+        );
+      } catch (error) {
+        console.error('[saveFactorySettingsAsDefault] Failed to load factory settings:', error);
+      }
+    },
+    loadDefaultPreset() {
+      if (!this.defaultPresetId || !this.savedPresets[this.defaultPresetId]) {
+        console.log('[loadDefaultPreset] No default preset found');
+        return false;
+      }
+
+      console.log('[loadDefaultPreset] Loading default preset...');
+      return this.loadPreset(this.defaultPresetId);
+    },
+
+    // Preset manager UI actions
+    setPresetSearchTerm(term) {
+      this.presetSearchTerm = term;
+      this.selectedPresets.clear();
+    },
+    setPresetSortBy(sortBy) {
+      this.presetSortBy = sortBy;
+    },
+    togglePresetMultiSelect() {
+      this.presetMultiSelectActive = !this.presetMultiSelectActive;
+      // Replace Set to ensure reactivity in UI templates
+      this.selectedPresets = new Set();
+    },
+    togglePresetSelection(presetId) {
+      // Work on a cloned Set to keep reactivity
+      const next = new Set(this.selectedPresets);
+      if (next.has(presetId)) {
+        next.delete(presetId);
+      } else {
+        next.add(presetId);
+      }
+      this.selectedPresets = next;
+    },
+    selectAllPresets() {
+      const next = new Set();
+      this.savedPresetsList.forEach((preset) => {
+        next.add(preset.id);
+      });
+      this.selectedPresets = next;
+    },
+    deselectAllPresets() {
+      this.selectedPresets = new Set();
+    },
+    deleteSelectedPresets() {
+      if (this.selectedPresets.size === 0) return;
+
+      if (
+        window.confirm(
+          this.t('presetManager.deleteSelectedConfirm', { count: this.selectedPresets.size }),
+        )
+      ) {
+        this.selectedPresets.forEach((presetId) => {
+          delete this.savedPresets[presetId];
+          if (this.currentPresetId === presetId) {
+            this.currentPresetId = null;
+          }
+          if (this.defaultPresetId === presetId) {
+            this.defaultPresetId = null;
+          }
+        });
+        this.selectedPresets = new Set();
+        this.presetMultiSelectActive = false;
+      }
+    },
+    /**
+     * Batch replace prompt titles and/or contents.
+     * @param {Object} payload
+     * @param {string} payload.find
+     * @param {string} payload.replace
+     * @param {{ title: boolean, content: boolean }} payload.targetFields
+     * @param {'selected'|'all'} payload.scope
+     * @param {boolean} payload.useRegex
+     * @param {boolean} payload.caseSensitive
+     * @param {boolean} payload.wholeWord
+     * @returns {{ matches: number, prompts: number }} summary
+     */
+    batchReplaceText(payload) {
+      const {
+        find,
+        replace,
+        targetFields,
+        scope,
+        useRegex,
+        caseSensitive,
+        wholeWord,
+        addPrefix,
+        prefixText,
+        addSuffix,
+        suffixText,
+        addSerial,
+        serialPosition,
+        serialStart,
+        serialDigits,
+      } = payload || {};
+
+      const findText = typeof find === 'string' ? find : '';
+      const replaceText = typeof replace === 'string' ? replace : '';
+      const hasFind = Boolean(findText);
+      const hasAdditions = Boolean(addPrefix) || Boolean(addSuffix) || Boolean(addSerial);
+      if (!hasFind && !hasAdditions) {
+        return { matches: 0, prompts: 0 };
+      }
+
+      // Build RegExp when needed
+      let pattern = null;
+      if (hasFind) {
+        if (useRegex) {
+          try {
+            pattern = new RegExp(findText, `g${caseSensitive ? '' : 'i'}`);
+          } catch {
+            throw new Error('INVALID_REGEX');
+          }
+        } else {
+          const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          let escaped = escapeRegExp(findText);
+          if (wholeWord) {
+            escaped = `\\b${escaped}\\b`;
+          }
+          pattern = new RegExp(escaped, `g${caseSensitive ? '' : 'i'}`);
+        }
+      }
+
+      // Decide target prompts
+      let targetIds = [];
+      if (scope === 'selected') {
+        if (this.selectedEditorPrompts.length === 0) {
+          // When explicitly targeting selected but none selected, do nothing
+          return { matches: 0, prompts: 0 };
+        }
+        targetIds = [...this.selectedEditorPrompts];
+      } else {
+        targetIds = [...this.promptOrder];
+      }
+
+      // Ensure stable ordering for serial numbers: follow editor order
+      const orderedTargetIds = this.promptOrder.filter((id) => targetIds.includes(id));
+
+      let totalChanges = 0;
+      let contentChanged = false;
+      /** @type {{ timestamp: string, changes: Array<{ promptId: string, before: { name: string|null, content: string|null }, after: { name: string|null, content: string|null } }> }} */
+      const historyEntry = { timestamp: new Date().toISOString(), changes: [] };
+
+      const replaceInText = (text) => {
+        if (!hasFind || typeof text !== 'string' || text.length === 0) {
+          return { newText: text, count: 0 };
+        }
+        let count = 0;
+        const newText = text.replace(pattern, () => {
+          count += 1;
+          return replaceText;
+        });
+        return { newText, count };
+      };
+
+      const getSerialStringForIndex = (index) => {
+        if (!addSerial) return '';
+        const start = Number.isFinite(serialStart) ? Number(serialStart) : 1;
+        const digits = Number.isFinite(serialDigits) && serialDigits > 0 ? Number(serialDigits) : 1;
+        const value = start + index;
+        return String(value).padStart(digits, '0');
+      };
+
+      orderedTargetIds.forEach((id, index) => {
+        const prompt = this.prompts[id];
+        if (!prompt) return;
+        let changesForPrompt = 0;
+
+        const originalName = prompt.name ?? '';
+        const originalContent = prompt.content ?? '';
+
+        const serialStr = getSerialStringForIndex(index);
+
+        // Title
+        if (targetFields?.title) {
+          let text = originalName;
+          // regex replacement
+          const { newText: replacedText, count } = replaceInText(text);
+          text = replacedText;
+          if (count > 0) changesForPrompt += count;
+
+          // additions
+          if (hasAdditions) {
+            let prefix = addPrefix ? String(prefixText || '') : '';
+            let suffix = addSuffix ? String(suffixText || '') : '';
+            if (addSerial) {
+              if (serialPosition === 'before') {
+                prefix = prefix + serialStr;
+              } else {
+                suffix = suffix + serialStr;
+              }
+            }
+            text = `${prefix}${text}${suffix}`;
+            changesForPrompt += 1; // count additions as one change for this field
+          }
+
+          if (text !== originalName) {
+            prompt.name = text;
+          }
+          var finalNameForHistory = text;
+        }
+
+        // Content
+        if (targetFields?.content && !prompt.marker) {
+          let text = originalContent;
+          // regex replacement
+          const { newText: replacedText, count } = replaceInText(text);
+          text = replacedText;
+          if (count > 0) changesForPrompt += count;
+
+          // additions
+          if (hasAdditions) {
+            let prefix = addPrefix ? String(prefixText || '') : '';
+            let suffix = addSuffix ? String(suffixText || '') : '';
+            if (addSerial) {
+              if (serialPosition === 'before') {
+                prefix = prefix + serialStr;
+              } else {
+                suffix = suffix + serialStr;
+              }
+            }
+            text = `${prefix}${text}${suffix}`;
+            changesForPrompt += 1; // count additions as one change for this field
+          }
+
+          if (text !== originalContent) {
+            prompt.content = text;
+            contentChanged = true;
+          }
+          var finalContentForHistory = text;
+        }
+
+        if (changesForPrompt > 0) {
+          totalChanges += changesForPrompt;
+          historyEntry.changes.push({
+            promptId: id,
+            before: { name: originalName, content: originalContent },
+            after: {
+              name: typeof finalNameForHistory !== 'undefined' ? finalNameForHistory : originalName,
+              content:
+                typeof finalContentForHistory !== 'undefined'
+                  ? finalContentForHistory
+                  : originalContent,
+            },
+          });
+        }
+      });
+
+      if (contentChanged) {
+        this.analyzeAllMacros();
+      }
+
+      if (historyEntry.changes.length > 0) {
+        this.batchReplaceHistory.push(historyEntry);
+        // Any new forward change invalidates redo stack
+        this.batchReplaceRedoStack = [];
+      }
+
+      return { matches: totalChanges, prompts: historyEntry.changes.length };
+    },
+    /** Undo last batch replace/additions change */
+    undoLastBatchChange() {
+      if (!this.batchReplaceHistory || this.batchReplaceHistory.length === 0) {
+        return { prompts: 0 };
+      }
+      const entry = this.batchReplaceHistory.pop();
+      if (!entry || !Array.isArray(entry.changes) || entry.changes.length === 0) {
+        return { prompts: 0 };
+      }
+      // Push to redo stack before applying revert
+      this.batchReplaceRedoStack.push(entry);
+      let contentChanged = false;
+      entry.changes.forEach((change) => {
+        const prompt = this.prompts[change.promptId];
+        if (!prompt) return;
+        if (typeof change.before.name === 'string' && prompt.name !== change.before.name) {
+          prompt.name = change.before.name;
+        }
+        if (typeof change.before.content === 'string' && prompt.content !== change.before.content) {
+          prompt.content = change.before.content;
+          contentChanged = true;
+        }
+      });
+      if (contentChanged) {
+        this.analyzeAllMacros();
+      }
+      // promptsAffected counts fields; for user-facing, count distinct prompts
+      const distinctPrompts = new Set(entry.changes.map((c) => c.promptId)).size;
+      return { prompts: distinctPrompts };
+    },
+    /** Redo last undone batch change */
+    redoLastBatchChange() {
+      if (!this.batchReplaceRedoStack || this.batchReplaceRedoStack.length === 0) {
+        return { prompts: 0 };
+      }
+      const entry = this.batchReplaceRedoStack.pop();
+      if (!entry || !Array.isArray(entry.changes) || entry.changes.length === 0) {
+        return { prompts: 0 };
+      }
+      let contentChanged = false;
+      entry.changes.forEach((change) => {
+        const prompt = this.prompts[change.promptId];
+        if (!prompt) return;
+        if (typeof change.after.name === 'string' && prompt.name !== change.after.name) {
+          prompt.name = change.after.name;
+        }
+        if (typeof change.after.content === 'string' && prompt.content !== change.after.content) {
+          prompt.content = change.after.content;
+          contentChanged = true;
+        }
+      });
+      if (contentChanged) {
+        this.analyzeAllMacros();
+      }
+      // Push back to history as a new step (so we can undo the redo)
+      this.batchReplaceHistory.push(entry);
+      const distinctPrompts = new Set(entry.changes.map((c) => c.promptId)).size;
+      return { prompts: distinctPrompts };
+    },
   },
   persist: {
     // Only persist the essential user data, not derived/UI states
-    pick: [
+    paths: [
       'rawJson',
       'originalFilename',
       'prompts',
       'promptOrder',
       'macroDisplayMode',
       'currentLanguage',
+      'promptCollapseStates',
+      'skipDeleteConfirmation',
+      'savedPresets',
+      'currentPresetId',
+      'defaultPresetId',
     ],
-    beforeHydrate: () => {
-      console.log('[Persistence] About to hydrate store from localStorage');
+    beforeRestore: () => {
+      console.log('[Persistence] About to restore store from localStorage');
     },
-    afterHydrate: (ctx) => {
+    afterRestore: (ctx) => {
       const hasPersistedData = Boolean(ctx.store.rawJson);
-      console.log(`[Persistence] Store hydrated. Has persisted data: ${hasPersistedData}`);
+      console.log(`[Persistence] Store restored. Has persisted data: ${hasPersistedData}`);
       if (hasPersistedData) {
         console.log(
           `[Persistence] Loaded ${Object.keys(ctx.store.prompts).length} prompts, ${ctx.store.promptOrder.length} in order`,
         );
-        // Re-analyze macros after hydration since derived states are not persisted
-        console.log('[Persistence] Re-analyzing macros after hydration...');
+        // Re-analyze macros after restore since derived states are not persisted
+        console.log('[Persistence] Re-analyzing macros after restore...');
         ctx.store.analyzeAllMacros();
       }
     },
