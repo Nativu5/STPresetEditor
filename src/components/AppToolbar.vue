@@ -53,6 +53,24 @@ const store = usePresetStore();
         <ArrowUpTrayIcon class="mr-2 -ml-1 h-5 w-5" />
         {{ store.t('toolbar.export') }}
       </button>
+      <!-- Toggle Worldbook View - Hidden -->
+      <!-- 
+      <button
+        class="inline-flex items-center rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-700 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:outline-none"
+        @click="store.setMainView(store.mainView === 'worldbook' ? 'editor' : 'worldbook')"
+      >
+        {{ store.t('toolbar.worldbook') }}
+      </button>
+      -->
+      <!-- Export Worldbook Button (quick) - Hidden -->
+      <!-- 
+      <button
+        class="inline-flex items-center rounded-lg bg-slate-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-600 focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:outline-none"
+        @click="store.exportWorldbookAsFile()"
+      >
+        {{ store.t('worldbookEditor.export') }}
+      </button>
+      -->
       <!-- Preset Manager Button -->
       <button
         class="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:outline-none"
@@ -61,6 +79,7 @@ const store = usePresetStore();
         <BookmarkIcon class="mr-2 -ml-1 h-5 w-5" />
         {{ store.t('toolbar.presets') }}
       </button>
+      
       <!-- Settings Button -->
       <button
         class="inline-flex items-center rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none"
@@ -126,6 +145,20 @@ const store = usePresetStore();
                   {{ store.t('toolbar.exportToJson') }}
                 </button>
               </MenuItem>
+              <!-- Worldbook menu item - Hidden -->
+              <!--
+              <MenuItem v-slot="{ active }">
+                <button
+                  :class="[
+                    active ? 'bg-slate-500 text-white' : 'text-gray-900',
+                    'group flex w-full items-center rounded-md px-2 py-2 text-sm',
+                  ]"
+                  @click="store.setMainView(store.mainView === 'worldbook' ? 'editor' : 'worldbook')"
+                >
+                  {{ store.t('toolbar.worldbook') }}
+                </button>
+              </MenuItem>
+              -->
             </div>
             <!-- Settings Actions Group (moved to Settings) -->
             <div class="px-1 py-1">

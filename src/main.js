@@ -4,6 +4,7 @@ import { createPinia } from 'pinia';
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import { createApp } from 'vue';
 import App from './App.vue';
+import router from './router';
 import './style.css';
 
 // Create Vue application instance
@@ -17,6 +18,7 @@ pinia.use(piniaPluginPersistedstate);
 
 // Register plugins with the Vue app
 app.use(pinia); // State management
+app.use(router); // Router
 app.use(FloatingVue); // Tooltip and popover functionality
 
 // Mount the application to the DOM

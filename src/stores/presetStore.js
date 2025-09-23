@@ -1,6 +1,6 @@
 import { debounce } from 'lodash-es';
 import { defineStore } from 'pinia';
-import languageData from '../assets/languages.json';
+import { convertAnyToLorebook, normalizeLorebook } from '../utils/worldbook';
 
 /**
  * @typedef {object} MacroData
@@ -91,7 +91,8 @@ export const usePresetStore = defineStore('preset', {
     promptCollapseStates: {}, // Individual prompt collapse states: { promptId: boolean }
 
     // Internationalization
-    currentLanguage: 'en', // Current language: 'en' or 'zh'
+    currentLanguage: 'cn', // Current language: 'en' or 'cn'
+    languageData: {}, // Dynamically loaded language data
 
     // User preferences
     skipDeleteConfirmation: false, // Whether to skip delete confirmation dialog
@@ -100,6 +101,7 @@ export const usePresetStore = defineStore('preset', {
     savedPresets: {}, // Object containing saved presets: { presetId: { name, data, createdAt, updatedAt } }
     currentPresetId: null, // ID of currently loaded preset
     isPresetManagerOpen: false, // Whether preset manager modal is open
+
     defaultPresetId: null, // ID of the default preset (factory settings)
 
     // Preset manager UI state
@@ -110,6 +112,12 @@ export const usePresetStore = defineStore('preset', {
     // Batch replace history for undo
     batchReplaceHistory: [], // Array<{ timestamp, changes: Array<{ promptId, before: { name, content }, after: { name, content } }> }>
     batchReplaceRedoStack: [], // Redo stack storing same shape as history entries
+
+    // --- Worldbook (Lorebook) state ---
+    worldbook: { name: '', entries: [], extensions: {} },
+    worldbookOriginalFilename: '',
+    // Main content view: 'editor' for prompts, 'worldbook' for worldbook editor
+    mainView: 'editor',
   }),
   getters: {
     /**
@@ -337,7 +345,7 @@ export const usePresetStore = defineStore('preset', {
       (state) =>
       (key, params = {}) => {
         const keys = key.split('.');
-        let value = languageData[state.currentLanguage];
+        let value = state.languageData[state.currentLanguage];
         for (const k of keys) {
           value = value?.[k];
         }
@@ -382,6 +390,26 @@ export const usePresetStore = defineStore('preset', {
       console.log('[Persistence] User imported new JSON, will be auto-saved');
       this.originalFilename = filename;
       this.parseFromJson(jsonString);
+    },
+    /**
+     * Attempt to import given JSON as a worldbook. If success, set as current worldbook and switch view.
+     * @param {string} jsonString
+     * @param {string} filename
+     * @returns {boolean} true if imported as worldbook
+     */
+    importWorldbookJson(jsonString, filename = '') {
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonString);
+      } catch (e) {
+        return false;
+      }
+      const lb = convertAnyToLorebook(parsed, filename?.replace(/\.[^/.]+$/, '') || '');
+      if (!lb) return false;
+      this.worldbook = normalizeLorebook(lb);
+      this.worldbookOriginalFilename = filename || '';
+      this.mainView = 'worldbook';
+      return true;
     },
     /**
      * Parse JSON data and populate the store
@@ -460,6 +488,77 @@ export const usePresetStore = defineStore('preset', {
         console.error('Failed to parse JSON string:', error);
         this.prompts = {};
         this.promptOrder = [];
+      }
+    },
+
+    // --- Worldbook actions ---
+    setMainView(view) {
+      if (view === 'editor' || view === 'worldbook') {
+        this.mainView = view;
+      }
+    },
+    setWorldbook(worldbook, filename = '') {
+      this.worldbook = normalizeLorebook(worldbook || { name: '', entries: [], extensions: {} });
+      this.worldbookOriginalFilename = filename || this.worldbookOriginalFilename || '';
+    },
+    updateWorldbookName(name) {
+      this.worldbook = { ...this.worldbook, name: String(name || '') };
+    },
+    addWorldbookEntry() {
+      const newEntry = {
+        id: window.crypto?.randomUUID ? window.crypto.randomUUID() : Date.now(),
+        keys: [],
+        secondary_keys: [],
+        comment: '',
+        content: '',
+        constant: false,
+        selective: false,
+        insertion_order: (this.worldbook.entries.length + 1) * 100,
+        enabled: true,
+        position: 'after_char',
+        use_regex: false,
+        extensions: {},
+      };
+      this.worldbook = {
+        ...this.worldbook,
+        entries: [...(this.worldbook.entries || []), newEntry],
+      };
+    },
+    updateWorldbookEntry(index, patch) {
+      const entries = [...(this.worldbook.entries || [])];
+      if (index < 0 || index >= entries.length) return;
+      entries[index] = { ...entries[index], ...(patch || {}) };
+      this.worldbook = { ...this.worldbook, entries };
+    },
+    deleteWorldbookEntry(index) {
+      const entries = (this.worldbook.entries || []).filter((_, i) => i !== index);
+      this.worldbook = { ...this.worldbook, entries };
+    },
+    exportWorldbookJsonString() {
+      const payload =
+        this.worldbook && typeof this.worldbook === 'object'
+          ? this.worldbook
+          : { name: '', entries: [], extensions: {} };
+      return JSON.stringify(payload, null, 2);
+    },
+    exportWorldbookAsFile() {
+      try {
+        const json = this.exportWorldbookJsonString();
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const base =
+          this.worldbook?.name ||
+          this.worldbookOriginalFilename?.replace(/\.[^/.]+$/, '') ||
+          'worldbook';
+        a.download = `${base}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        console.error('[exportWorldbookAsFile] Failed to export worldbook:', e);
       }
     },
 
@@ -1160,13 +1259,27 @@ export const usePresetStore = defineStore('preset', {
     },
 
     // Language actions
-    setLanguage(language) {
-      if (['en', 'zh'].includes(language)) {
+    async setLanguage(language) {
+      if (['en', 'cn'].includes(language)) {
         this.currentLanguage = language;
+        await this.loadLanguageData(language);
       }
     },
     toggleLanguage() {
-      this.currentLanguage = this.currentLanguage === 'en' ? 'zh' : 'en';
+      const newLanguage = this.currentLanguage === 'en' ? 'cn' : 'en';
+      this.setLanguage(newLanguage);
+    },
+    async loadLanguageData(language) {
+      try {
+        const languageModule = await import(`../assets/${language}.json`);
+        this.languageData[language] = languageModule.default;
+      } catch (error) {
+        console.error(`Failed to load language data for ${language}:`, error);
+      }
+    },
+    async initializeLanguage() {
+      // Load default language data
+      await this.loadLanguageData(this.currentLanguage);
     },
 
     // Delete confirmation preferences
@@ -1250,7 +1363,7 @@ export const usePresetStore = defineStore('preset', {
      * Does NOT load into current editor; only saves into savedPresets.
      * @param {string} jsonString
      * @param {string} filename
-     * @returns {{ result: 'saved'|'overwritten'|'failed', name?: string }}
+     * @returns {{ result: 'saved'|'overwritten'|'failed', name?: string, id?: string }}
      */
     importPresetWithDuplicateCheck(jsonString, filename = '') {
       let parsed;
@@ -1310,7 +1423,7 @@ export const usePresetStore = defineStore('preset', {
         if (window.confirm(confirmText)) {
           this.savedPresets[existingId].data = presetData;
           this.savedPresets[existingId].updatedAt = now;
-          return { result: 'overwritten', name: baseName };
+          return { result: 'overwritten', name: baseName, id: existingId };
         }
 
         // Generate a unique name like "Name (2)", "Name (3)"...
@@ -1328,7 +1441,7 @@ export const usePresetStore = defineStore('preset', {
           createdAt: now,
           updatedAt: now,
         };
-        return { result: 'saved', name: uniqueName };
+        return { result: 'saved', name: uniqueName, id: newId };
       }
 
       // No duplicate, save directly under baseName
@@ -1339,7 +1452,7 @@ export const usePresetStore = defineStore('preset', {
         createdAt: now,
         updatedAt: now,
       };
-      return { result: 'saved', name: baseName };
+      return { result: 'saved', name: baseName, id: newId };
     },
     savePreset(name = null) {
       console.log('[savePreset] Starting to save preset...');
@@ -1830,11 +1943,16 @@ export const usePresetStore = defineStore('preset', {
       'promptOrder',
       'macroDisplayMode',
       'currentLanguage',
+      'languageData',
       'promptCollapseStates',
       'skipDeleteConfirmation',
       'savedPresets',
       'currentPresetId',
       'defaultPresetId',
+      // Worldbook persistence
+      'worldbook',
+      'worldbookOriginalFilename',
+      'mainView',
     ],
     beforeRestore: () => {
       console.log('[Persistence] About to restore store from localStorage');

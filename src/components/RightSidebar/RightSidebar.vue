@@ -26,7 +26,7 @@
       </TabPanels>
     </TabGroup>
 
-    <!-- Batch Replace overlay panel: cover right pane only -->
+    <!-- Batch Replace overlay panel: cover right pane only, default hidden -->
     <transition name="fade">
       <div v-if="store.isBatchReplaceModalOpen" class="absolute inset-0 z-40">
         <div class="absolute inset-0 flex">

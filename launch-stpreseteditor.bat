@@ -46,7 +46,7 @@ if not exist "node_modules" (
 )
 
 echo Starting development server...
-echo Application will automatically open at: http://localhost:5173
+echo Application will automatically open at: http://localhost:9111
 echo.
 echo Press Ctrl+C to stop the server
 echo.

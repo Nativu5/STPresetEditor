@@ -37,12 +37,12 @@
                 <button
                   class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium"
                   :class="store.currentLanguage === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                  @click="store.setLanguage('en')"
+                  @click="switchLanguage('en')"
                 >EN</button>
                 <button
                   class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium"
-                  :class="store.currentLanguage === 'zh' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                  @click="store.setLanguage('zh')"
+                  :class="store.currentLanguage === 'cn' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                  @click="switchLanguage('cn')"
                 >中文</button>
               </div>
             </div>
@@ -95,6 +95,7 @@
 
 <script setup>
 import { XMarkIcon } from '@heroicons/vue/24/outline';
+import { useRouter } from 'vue-router';
 import { usePresetStore } from '../stores/presetStore';
 
 defineProps({
@@ -105,6 +106,7 @@ defineProps({
 });
 
 const store = usePresetStore();
+const router = useRouter();
 
 const closeModal = () => {
   store.closeSettingsModal();
@@ -112,6 +114,10 @@ const closeModal = () => {
 
 const toggleDeleteConfirmation = (event) => {
   store.setSkipDeleteConfirmation(!event.target.checked);
+};
+
+const switchLanguage = (language) => {
+  router.push(`/${language}`);
 };
 
 const onResetToDefault = () => {

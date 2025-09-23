@@ -10,15 +10,25 @@ const fileInput = ref(null);
 const isDragOver = ref(false);
 const currentFilename = ref('');
 
- function importJson() {
+function importJson() {
+  let parsed;
   try {
-    // Basic validation
-    JSON.parse(jsonInput.value);
+    parsed = JSON.parse(jsonInput.value);
   } catch {
     alert(store.t('importModal.invalidContent'));
     return;
   }
 
+  // Try import as Worldbook (Lorebook) first
+  const importedAsWorldbook = store.importWorldbookJson(jsonInput.value, currentFilename.value);
+  if (importedAsWorldbook) {
+    const count = Array.isArray(store.worldbook?.entries) ? store.worldbook.entries.length : 0;
+    alert(store.t('importModal.worldbookImported', { count }));
+    store.closeImportModal();
+    return;
+  }
+
+  // Fallback: treat as preset
   const result = store.importPresetWithDuplicateCheck(jsonInput.value, currentFilename.value);
   if (result?.result === 'failed') {
     alert(store.t('importModal.invalidContent'));
@@ -28,8 +38,18 @@ const currentFilename = ref('');
   const messageKey = result?.result === 'overwritten' ? 'importModal.overwriteDone' : 'importModal.savedDone';
   const nameParam = { name: result?.name || '' };
   alert(store.t(messageKey, nameParam));
+
+  if (result?.id) {
+    const loadNowMsg = store.t('importModal.loadNowConfirm', nameParam);
+    if (window.confirm(loadNowMsg)) {
+      store.loadPreset(result.id);
+      alert(store.t('importModal.loadNowDone', nameParam));
+    }
+  }
   store.closeImportModal();
- }
+}
+
+ 
 
 function handleFileSelect(event) {
   const file = event.target.files[0];
@@ -196,6 +216,7 @@ function triggerFileInput() {
                 >
                   {{ store.t('importModal.cancel') }}
                 </button>
+                
                 <button
                   type="button"
                   class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"

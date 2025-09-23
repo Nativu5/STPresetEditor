@@ -369,6 +369,10 @@ const selectPrompt = () => {
   store.selectPrompt(props.prompt.id);
   // Sync left library scroll position
   store.navigateLibraryToPrompt(props.prompt.id);
+  // 自动隐藏批量替换模态框
+  if (store.isBatchReplaceModalOpen) {
+    store.closeBatchReplaceModal();
+  }
 };
 
 const toggleBatchSelection = () => {

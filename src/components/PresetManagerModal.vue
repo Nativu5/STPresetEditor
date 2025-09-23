@@ -3,7 +3,7 @@
   <div
     v-if="isOpen"
     class="fixed inset-0 z-50 overflow-y-auto"
-    @click="closeModal"
+    @click="onBackdropClick"
   >
     <!-- Backdrop -->
     <div class="fixed inset-0 bg-black/30 transition-opacity" />
@@ -241,7 +241,7 @@
     </div>
 
     <!-- Rename modal -->
-    <div v-if="isRenameModalOpen" class="fixed inset-0 z-60 overflow-y-auto">
+    <div v-if="isRenameModalOpen" class="fixed inset-0 z-60 overflow-y-auto" @click.stop>
       <div class="fixed inset-0 bg-black/30 transition-opacity"></div>
       <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
@@ -397,6 +397,12 @@ const deselectAllPresets = () => {
 
 const deleteSelectedPresets = () => {
   store.deleteSelectedPresets();
+};
+
+// Backdrop click handler: ignore close when renaming dialog is open
+const onBackdropClick = () => {
+  if (isRenameModalOpen.value) return;
+  closeModal();
 };
 
 // Watch for search and sort changes
